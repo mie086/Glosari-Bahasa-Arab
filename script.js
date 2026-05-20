@@ -4,7 +4,6 @@
 const SUPABASE_URL = "https://ejivaczazdimurhtlmsj.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqaXZhY3phemRpbXVyaHRsbXNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMzEzMjAsImV4cCI6MjA5NDgwNzMyMH0._pjuat4uPjujjRiZyj1331vySeMXPGU_SGpzdfkfSSg";
 
-// PENYELASAIAN: Menggunakan nama 'supabaseClient' bagi mengelakkan pertembungan nama global
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // =========================================================================
@@ -14,20 +13,17 @@ let dataIstilah = [];
 let currentSearch = "";
 let selectedSearchItem = null;
 
-// Elemen DOM Global & Carian
 const navButtons = document.querySelectorAll(".nav-btn");
 const viewSections = document.querySelectorAll(".view-section");
 const searchInput = document.getElementById("searchInput");
 const suggestionsList = document.getElementById("suggestionsList");
 const resultsList = document.getElementById("resultsList");
 
-// Elemen DOM Autentikasi & Dashboard Admin
 const adminAuthBox = document.getElementById("adminAuthBox");
 const adminDashboardBox = document.getElementById("adminDashboardBox");
 const loginForm = document.getElementById("loginForm");
 const btnLogKeluar = document.getElementById("btnLogKeluar");
 
-// Elemen DOM Komponen Borang Admin
 const adminTableBody = document.getElementById("adminTableBody");
 const formSection = document.getElementById("formSection");
 const termForm = document.getElementById("termForm");
@@ -48,17 +44,77 @@ const th1 = document.getElementById("th1");
 const th2 = document.getElementById("th2");
 const th3 = document.getElementById("th3");
 
-// =========================================================================
-// 3. LOGIK AUTENTIKASI (PENGESAHAN USER UNTUK RLS TINGGI)
-// =========================================================================
+const inputCustomTitle = document.getElementById("customTitle");
+const inputCustomContent = document.getElementById("customContent");
 
-// Semak status log masuk semasa sistem bermula
+// =========================================================================
+// 3. LOGIK FORMAT TEKS DINAMIK
+// =========================================================================
+window.applyFormat = function(textareaId, type, colorValue = null) {
+    const textarea = document.getElementById(textareaId);
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const originalText = textarea.value;
+    const selectedText = originalText.substring(start, end);
+
+    let tagOpen = "";
+    let tagClose = "";
+    let modifiedText = "";
+
+    switch (type) {
+        case 'b':
+            tagOpen = "<b>"; tagClose = "</b>";
+            modifiedText = tagOpen + selectedText + tagClose;
+            break;
+        case 'u':
+            tagOpen = "<u>"; tagClose = "</u>";
+            modifiedText = tagOpen + selectedText + tagClose;
+            break;
+        case 'i':
+            tagOpen = "<i>"; tagClose = "</i>";
+            modifiedText = tagOpen + selectedText + tagClose;
+            break;
+        case 'color':
+            tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>";
+            break;
+        case 'bullet':
+            if (selectedText.trim().length > 0) {
+                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line}</li>` : '').filter(l => l).join('');
+                modifiedText = `<ul>${lines}</ul>`;
+            } else {
+                modifiedText = "<ul><li>Teks Senarai</li></ul>";
+            }
+            break;
+        case 'number':
+            if (selectedText.trim().length > 0) {
+                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line}</li>` : '').filter(l => l).join('');
+                modifiedText = `<ol>${lines}</ol>`;
+            } else {
+                modifiedText = "<ol><li>Teks Senarai</li></ol>";
+            }
+            break;
+    }
+
+    if (type !== 'bullet' && type !== 'number') {
+        modifiedText = tagOpen + selectedText + tagClose;
+    }
+
+    textarea.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
+
+    textarea.focus();
+    textarea.selectionStart = start;
+    textarea.selectionEnd = start + modifiedText.length;
+    textarea.dispatchEvent(new Event('input'));
+};
+
+// =========================================================================
+// 4. LOGIK AUTENTIKASI (PENGESAHAN USER UNTUK RLS TINGGI)
+// =========================================================================
 async function checkUserSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateAdminUI(session);
 }
 
-// Kemas kini antara muka (UI) mengikut sesi log masuk pengguna
 function updateAdminUI(session) {
     if (session) {
         adminAuthBox.style.display = "none";
@@ -70,7 +126,6 @@ function updateAdminUI(session) {
     }
 }
 
-// Fungsi Log Masuk
 loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const email = document.getElementById("loginEmail").value;
@@ -85,23 +140,18 @@ loginForm.addEventListener("submit", async (e) => {
     }
 });
 
-// Fungsi Log Keluar
 btnLogKeluar.addEventListener("click", async () => {
     await supabaseClient.auth.signOut();
     updateAdminUI(null);
 });
 
-// Pantau sebarang perubahan status login (Log in / Log out)
 supabaseClient.auth.onAuthStateChange((_event, session) => {
     updateAdminUI(session);
 });
 
-
 // =========================================================================
-// 4. OPERASI CRUD PANGKALAN DATA (SUPABASE API)
+// 5. OPERASI CRUD PANGKALAN DATA (SUPABASE API)
 // =========================================================================
-
-// Ambil (Read) Data Terkini dari Supabase SQL Table
 async function loadDataFromSupabase() {
     const { data, error } = await supabaseClient
         .from('istilah_arab')
@@ -116,7 +166,6 @@ async function loadDataFromSupabase() {
     renderAdminList();
 }
 
-// Simpan (Create / Update via Upsert) Data ke Supabase
 termForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
@@ -124,7 +173,6 @@ termForm.addEventListener("submit", async (e) => {
     const chrArray = inputCharacteristics.value.split("\n").filter(line => line.trim() !== "");
     const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
 
-    // Ambil baris data daripada Pembangun Jadual Komponen
     const rowItems = builderRowsContainer.querySelectorAll(".builder-row-item");
     const rowsData = [];
     rowItems.forEach(row => {
@@ -136,7 +184,9 @@ termForm.addEventListener("submit", async (e) => {
 
     const tableDataObject = {
         headers: [th1.value, th2.value, th3.value],
-        rows: rowsData
+        rows: rowsData,
+        custom_title: inputCustomTitle.value.trim(),
+        custom_content: inputCustomContent.value.trim()
     };
 
     const termObject = {
@@ -150,7 +200,6 @@ termForm.addEventListener("submit", async (e) => {
         keywords: kwArray
     };
 
-    // Melakukan panggilan API Supabase Upsert
     const { error } = await supabaseClient
         .from('istilah_arab')
         .upsert([termObject]);
@@ -166,7 +215,6 @@ termForm.addEventListener("submit", async (e) => {
     }
 });
 
-// Padam (Delete) Data di Supabase
 window.deleteItem = async function(id) {
     if (confirm("Adakah anda pasti mahu memadam istilah ini dari pangkalan data cloud?")) {
         const { error } = await supabaseClient
@@ -185,11 +233,9 @@ window.deleteItem = async function(id) {
     }
 };
 
-
 // =========================================================================
-// 5. INTERFASI KUMPULAN JADUAL & HUBUNGAN UI
+// 6. INTERFASI JADUAL & HUBUNGAN UI
 // =========================================================================
-
 function createTableRowInput(val1 = "", val2 = "", val3 = "") {
     const rowDiv = document.createElement("div");
     rowDiv.className = "builder-row-item";
@@ -205,7 +251,6 @@ function createTableRowInput(val1 = "", val2 = "", val3 = "") {
 
 btnTambahBarisJadual.addEventListener("click", () => createTableRowInput());
 
-// Logik Pertukaran Navigasi Tab (Telah Dibaiki)
 navButtons.forEach(button => {
     button.addEventListener("click", () => {
         navButtons.forEach(btn => btn.classList.remove("active"));
@@ -217,7 +262,6 @@ navButtons.forEach(button => {
     });
 });
 
-// Logik Input Kotak Carian Umum
 function handleSearchInput(e) {
     currentSearch = e.target.value.trim();
     if (currentSearch === "") {
@@ -242,7 +286,7 @@ function handleSearchInput(e) {
             div.innerHTML = `
                 <div class="suggestion-info">
                     <span class="suggestion-title">${item.title_ms}</span>
-                    <span class="suggestion-cat">${item.category}</span>
+                    <span class="suggestion-cat">${item.category ? item.category : ''}</span>
                 </div>
                 <div class="suggestion-arabic">${item.title_ar}</div>
             `;
@@ -274,12 +318,33 @@ function renderSearchCard() {
     card.className = "card";
     
     const chrHTML = selectedSearchItem.characteristics.map(c => {
-        if (c.includes(':')) {
-            let parts = c.split(':');
-            return `<li><strong>${parts[0]}:</strong>${parts.slice(1).join(':')}</li>`;
+        let firstColon = c.indexOf(':');
+        if (firstColon !== -1) {
+            let title = c.substring(0, firstColon);
+            let desc = c.substring(firstColon + 1);
+            
+            if (title.includes('style="') && !title.substring(title.indexOf('style="')).includes('">')) {
+                let nextColon = c.indexOf(':', firstColon + 1);
+                if (nextColon !== -1) {
+                    title = c.substring(0, nextColon);
+                    desc = c.substring(nextColon + 1);
+                }
+            }
+            return `<li><strong>${title}:</strong>${desc}</li>`;
         }
         return `<li>${c}</li>`;
     }).join("");
+
+    let generatedCustomSectionHtml = "";
+    if (selectedSearchItem.table_data && selectedSearchItem.table_data.custom_title) {
+        let formattedContent = selectedSearchItem.table_data.custom_content 
+            ? selectedSearchItem.table_data.custom_content.replace(/\n/g, "<br>") 
+            : "";
+        generatedCustomSectionHtml = `
+            <div class="section-title" style="margin-top: 18px;">${selectedSearchItem.table_data.custom_title}:</div>
+            <div class="custom-content-block" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
+        `;
+    }
 
     let generatedTableHtml = "";
     const tData = selectedSearchItem.table_data;
@@ -312,14 +377,16 @@ function renderSearchCard() {
         <div class="card-header">
             <div class="card-title-group">
                 <div class="title-ms">${selectedSearchItem.title_ms}</div>
-                <span class="category-badge">${selectedSearchItem.category}</span>
+                ${selectedSearchItem.category ? `<span class="category-badge">${selectedSearchItem.category}</span>` : ''}
             </div>
             <div class="title-ar">${selectedSearchItem.title_ar}</div>
         </div>
         <div class="card-body">
-            <p class="definition">${selectedSearchItem.definition}</p>
+            <div class="definition">${selectedSearchItem.definition}</div>
             <div class="section-title">Ciri-Ciri Utama:</div>
             <ul class="characteristics-list">${chrHTML}</ul>
+            
+            ${generatedCustomSectionHtml}
             ${generatedTableHtml}
         </div>`;
     resultsList.appendChild(card);
@@ -332,7 +399,7 @@ function renderAdminList() {
         tr.innerHTML = `
             <td><strong>${item.title_ms}</strong></td>
             <td class="td-arabic">${item.title_ar}</td>
-            <td><span class="badge">${item.category}</span></td>
+            <td><span class="badge">${item.category ? item.category : 'Kosong'}</span></td>
             <td>
                 <div class="actions-cell">
                     <button class="btn btn-edit" onclick="editItem('${item.id}')">Ubah</button>
@@ -351,19 +418,26 @@ window.editItem = function(id) {
     inputId.value = item.id;
     inputTitleMs.value = item.title_ms;
     inputTitleAr.value = item.title_ar;
-    inputCategory.value = item.category;
+    inputCategory.value = item.category || "";
     inputKeywords.value = item.keywords ? item.keywords.join(", ") : "";
     inputDefinition.value = item.definition;
     inputCharacteristics.value = item.characteristics.join("\n");
     
     builderRowsContainer.innerHTML = "";
-    if (item.table_data && item.table_data.headers) {
-        th1.value = item.table_data.headers[0] || "";
-        th2.value = item.table_data.headers[1] || "";
-        th3.value = item.table_data.headers[2] || "";
-        item.table_data.rows.forEach(row => createTableRowInput(row[0], row[1], row[2]));
+    if (item.table_data) {
+        th1.value = item.table_data.headers ? (item.table_data.headers[0] || "") : "";
+        th2.value = item.table_data.headers ? (item.table_data.headers[1] || "") : "";
+        th3.value = item.table_data.headers ? (item.table_data.headers[2] || "") : "";
+        
+        inputCustomTitle.value = item.table_data.custom_title || "";
+        inputCustomContent.value = item.table_data.custom_content || "";
+
+        if (item.table_data.rows) {
+            item.table_data.rows.forEach(row => createTableRowInput(row[0], row[1], row[2]));
+        }
     } else {
         th1.value = ""; th2.value = ""; th3.value = "";
+        inputCustomTitle.value = ""; inputCustomContent.value = "";
     }
 
     formSection.classList.add("active");
@@ -374,6 +448,8 @@ btnBukaBorang.addEventListener("click", () => {
     termForm.reset();
     inputId.value = "";
     builderRowsContainer.innerHTML = "";
+    inputCustomTitle.value = "";
+    inputCustomContent.value = "";
     formTitle.textContent = "Tambah Istilah Baru";
     formSection.classList.add("active");
     createTableRowInput();
@@ -386,9 +462,10 @@ function closeForm() {
     termForm.reset(); 
     inputId.value = ""; 
     builderRowsContainer.innerHTML = "";
+    inputCustomTitle.value = "";
+    inputCustomContent.value = "";
 }
 
-// Global Document Listeners
 searchInput.addEventListener("input", handleSearchInput);
 document.addEventListener("click", (e) => {
     if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
@@ -396,7 +473,6 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// Pencetus sistem pemula
 checkUserSession();
 loadDataFromSupabase();
 renderSearchCard();
