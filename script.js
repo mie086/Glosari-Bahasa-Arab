@@ -317,12 +317,25 @@ function renderSearchCard() {
     const card = document.createElement("div");
     card.className = "card";
     
+    // =========================================================================
+    // KEMASKINI PENTING: LOGIK PINTAR MEMBACA TAG HTML SENARAI TOOLBAR
+    // =========================================================================
     const chrHTML = selectedSearchItem.characteristics.map(c => {
+        
+        // 1. Jika teks telah dijadikan senarai menggunakan butang Toolbar (ul / ol)
+        if (c.includes('<ol>') || c.includes('<ul>')) {
+            // Kita matikan bintik senarai <li> utama supaya tidak berlaku "double bullet"
+            // margin-left: -1.5rem digunakan supaya nombor anak senarai sejajar lurus dengan teks di atasnya
+            return `<li style="list-style-type: none; margin-left: -1.5rem; margin-bottom: 0;">${c}</li>`;
+        }
+
+        // 2. Logik data biasa: Auto-Bold pada perkataan sebelum titik bertindih (:)
         let firstColon = c.indexOf(':');
         if (firstColon !== -1) {
             let title = c.substring(0, firstColon);
             let desc = c.substring(firstColon + 1);
             
+            // Keselamatan jika titik bertindih ada di dalam kod warna HTML
             if (title.includes('style="') && !title.substring(title.indexOf('style="')).includes('">')) {
                 let nextColon = c.indexOf(':', firstColon + 1);
                 if (nextColon !== -1) {
@@ -332,8 +345,11 @@ function renderSearchCard() {
             }
             return `<li><strong>${title}:</strong>${desc}</li>`;
         }
+        
+        // 3. Paparan teks biasa
         return `<li>${c}</li>`;
     }).join("");
+    // =========================================================================
 
     let generatedCustomSectionHtml = "";
     if (selectedSearchItem.table_data && selectedSearchItem.table_data.custom_title) {
