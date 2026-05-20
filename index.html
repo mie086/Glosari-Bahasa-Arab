@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Istilah Bahasa Arab</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Kamus & Pengurusan Istilah Arab</h1>
+        <p>Sistem gabungan carian dan panel pengurusan data nahu/sarf</p>
+    </header>
+
+    <nav class="nav-tabs">
+        <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">Halaman Carian</button>
+        <button class="nav-btn" id="tabAdmin" data-target="sectionAdmin">Panel Admin</button>
+    </nav>
+
+    <main>
+        <section id="sectionCarian" class="view-section active">
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <input type="search" id="searchInput" class="form-control" autocomplete="off" placeholder="Taip untuk mencari istilah (cth: madhi, fail)...">
+                </div>
+                <div class="suggestions-list" id="suggestionsList"></div>
+            </div>
+            <div id="resultsList"></div>
+        </section>
+
+        <section id="sectionAdmin" class="view-section">
+            
+            <div id="adminAuthBox" style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-color); max-width: 400px; margin: 0 auto;">
+                <h3 style="margin-bottom: 12px; color: var(--primary-color);">Log Masuk Pentadbir</h3>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>E-mel Admin</label>
+                        <input type="email" id="loginEmail" class="form-control" placeholder="admin@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Kata Laluan</label>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="******" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">Log Masuk</button>
+                </form>
+            </div>
+
+            <div id="adminDashboardBox" style="display: none;">
+                <div class="admin-top-bar">
+                    <div>
+                        <h3>Pangkalan Data Supabase SQL</h3>
+                        <button id="btnLogKeluar" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 4px;">Log Keluar</button>
+                    </div>
+                    <button class="btn btn-primary" id="btnBukaBorang">+ Tambah Istilah</button>
+                </div>
+
+                <div class="form-section" id="formSection">
+                    <h2 id="formTitle">Tambah Istilah Baru</h2>
+                    <form id="termForm">
+                        <input type="hidden" id="termId">
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="titleMs">Nama Istilah (Melayu)</label>
+                                <input type="text" id="titleMs" class="form-control" placeholder="Contoh: Fi'il Madhi" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="titleAr">Nama Istilah (Arab)</label>
+                                <input type="text" id="titleAr" class="form-control arabic-input" placeholder="فِعْل مَاضِي" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="category">Kategori Utama</label>
+                                <select id="category" class="form-control" required>
+                                    <option value="Fiil">Fi'il (Kata Kerja)</option>
+                                    <option value="Isim">Isim (Kata Nama)</option>
+                                    <option value="Harf">Harf (Huruf/Kata Tugas)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="keywords">Kata Kunci (Asingkan dengan koma)</label>
+                                <input type="text" id="keywords" class="form-control" placeholder="cth: madhi, lepas, pelaku">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="definition">Definisi / Penerangan</label>
+                            <textarea id="definition" class="form-control" rows="3" placeholder="Masukkan maksud istilah..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="characteristics">Ciri-Ciri Utama (Satu ciri per baris)</label>
+                            <textarea id="characteristics" class="form-control" rows="4" placeholder="Ciri 1&#10;Ciri 2" required></textarea>
+                        </div>
+
+                        <div class="form-group table-builder-box">
+                            <label class="builder-label">Pembangun Jadual Contoh (Pilihan)</label>
+                            
+                            <div class="builder-header-grid">
+                                <input type="text" id="th1" class="form-control" style="padding:8px;" placeholder="Header 1 (cth: Dhamir)">
+                                <input type="text" id="th2" class="form-control" style="padding:8px;" placeholder="Header 2 (cth: Perkataan)">
+                                <input type="text" id="th3" class="form-control" style="padding:8px;" placeholder="Header 3 (cth: Maksud)">
+                            </div>
+                            
+                            <div class="builder-rows-container" id="builderRowsContainer"></div>
+                            
+                            <button type="button" class="btn btn-primary" id="btnTambahBarisJadual" style="padding: 6px 12px; font-size: 0.8rem;">+ Tambah Baris Data</button>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="btnBatal">Batal</button>
+                            <button type="submit" class="btn btn-success">Simpan Data ke SQL</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Istilah (MS)</th>
+                                <th style="text-align: right;">Istilah (AR)</th>
+                                <th>Kategori</th>
+                                <th>Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
