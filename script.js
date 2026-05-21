@@ -12,6 +12,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let dataIstilah = [];
 let currentSearch = "";
 let selectedSearchItem = null;
+let lastFocusedTableInput = null; 
 
 const navButtons = document.querySelectorAll(".nav-btn");
 const viewSections = document.querySelectorAll(".view-section");
@@ -48,7 +49,47 @@ const inputCustomTitle = document.getElementById("customTitle");
 const inputCustomContent = document.getElementById("customContent");
 
 // =========================================================================
-// 3. LOGIK FORMAT TEKS DINAMIK
+// 3. LOGIK TOOLBAR UNTUK JADUAL DINAMIK
+// =========================================================================
+document.addEventListener('focusin', function(e) {
+    if (e.target && e.target.classList.contains('table-input-target')) {
+        lastFocusedTableInput = e.target;
+    }
+});
+
+window.applyTableFormat = function(type, colorValue = null) {
+    if (!lastFocusedTableInput) {
+        alert("Sila klik di dalam mana-mana petak jadual (Header atau Lajur) terlebih dahulu sebelum menekan butang format.");
+        return;
+    }
+
+    const input = lastFocusedTableInput;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const originalText = input.value;
+    const selectedText = originalText.substring(start, end);
+
+    let tagOpen = "";
+    let tagClose = "";
+
+    switch (type) {
+        case 'b': tagOpen = "<b>"; tagClose = "</b>"; break;
+        case 'u': tagOpen = "<u>"; tagClose = "</u>"; break;
+        case 'i': tagOpen = "<i>"; tagClose = "</i>"; break;
+        case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; break;
+    }
+
+    const modifiedText = tagOpen + selectedText + tagClose;
+    input.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
+
+    input.focus();
+    input.selectionStart = start;
+    input.selectionEnd = start + modifiedText.length;
+    input.dispatchEvent(new Event('input'));
+};
+
+// =========================================================================
+// 4. LOGIK FORMAT TEKS (TEXTAREA) + ALGORITMA AUTO-MERGE LIST
 // =========================================================================
 window.applyFormat = function(textareaId, type, colorValue = null) {
     const textarea = document.getElementById(textareaId);
@@ -76,6 +117,7 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
             break;
         case 'color':
             tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>";
+            modifiedText = tagOpen + selectedText + tagClose;
             break;
         case 'bullet':
             if (selectedText.trim().length > 0) {
@@ -95,11 +137,17 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
             break;
     }
 
-    if (type !== 'bullet' && type !== 'number') {
-        modifiedText = tagOpen + selectedText + tagClose;
-    }
-
+    // Suntik teks yang telah diformat ke posisi asal kursor
     textarea.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
+
+    // =========================================================================
+    // TINDAKAN PERBAIKAN: SEAMLESS AUTO-MERGE REGEX ALGORITHM
+    // Menyerap dan menyatukan tag </ol><ol> bersebelahan menjadi satu kumpulan tunggal
+    // =========================================================================
+    textarea.value = textarea.value
+        .replace(/<\/ol>([\s\n]*?)<ol>/gi, '$1')
+        .replace(/<\/ul>([\s\n]*?)<ul>/gi, '$1');
+    // =========================================================================
 
     textarea.focus();
     textarea.selectionStart = start;
@@ -108,7 +156,7 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
 };
 
 // =========================================================================
-// 4. LOGIK AUTENTIKASI (PENGESAHAN USER UNTUK RLS TINGGI)
+// 5. LOGIK AUTENTIKASI (PENGESAHAN USER UNTUK RLS TINGGI)
 // =========================================================================
 async function checkUserSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
@@ -150,7 +198,7 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
 });
 
 // =========================================================================
-// 5. OPERASI CRUD PANGKALAN DATA (SUPABASE API)
+// 6. OPERASI CRUD PANGKALAN DATA (SUPABASE API)
 // =========================================================================
 async function loadDataFromSupabase() {
     const { data, error } = await supabaseClient
@@ -234,15 +282,15 @@ window.deleteItem = async function(id) {
 };
 
 // =========================================================================
-// 6. INTERFASI JADUAL & HUBUNGAN UI
+// 7. INTERFASI KUMPULAN JADUAL & HUBUNGAN UI
 // =========================================================================
 function createTableRowInput(val1 = "", val2 = "", val3 = "") {
     const rowDiv = document.createElement("div");
     rowDiv.className = "builder-row-item";
     rowDiv.innerHTML = `
-        <input type="text" class="form-control col-1" style="padding:8px;" placeholder="Lajur 1" value="${val1}">
-        <input type="text" class="form-control col-2 arabic-input" style="padding:8px;" placeholder="Arab" value="${val2}">
-        <input type="text" class="form-control col-3" style="padding:8px;" placeholder="Lajur 3" value="${val3}">
+        <input type="text" class="form-control col-1 table-input-target" style="padding:8px;" placeholder="Lajur 1" value="${val1}">
+        <input type="text" class="form-control col-2 table-input-target" style="padding:8px;" placeholder="Lajur 2" value="${val2}">
+        <input type="text" class="form-control col-3 table-input-target" style="padding:8px;" placeholder="Lajur 3" value="${val3}">
         <button type="button" class="btn btn-danger btn-remove-row" style="padding: 8px 12px;">X</button>
     `;
     rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
@@ -286,7 +334,7 @@ function handleSearchInput(e) {
             div.innerHTML = `
                 <div class="suggestion-info">
                     <span class="suggestion-title">${item.title_ms}</span>
-                    <span class="suggestion-cat">${item.category ? item.category : ''}</span>
+                    <span class="suggestion-cat">${item.category ? item.category : 'Tiada Kategori'}</span>
                 </div>
                 <div class="suggestion-arabic">${item.title_ar}</div>
             `;
@@ -317,25 +365,16 @@ function renderSearchCard() {
     const card = document.createElement("div");
     card.className = "card";
     
-    // =========================================================================
-    // KEMASKINI PENTING: LOGIK PINTAR MEMBACA TAG HTML SENARAI TOOLBAR
-    // =========================================================================
     const chrHTML = selectedSearchItem.characteristics.map(c => {
-        
-        // 1. Jika teks telah dijadikan senarai menggunakan butang Toolbar (ul / ol)
         if (c.includes('<ol>') || c.includes('<ul>')) {
-            // Kita matikan bintik senarai <li> utama supaya tidak berlaku "double bullet"
-            // margin-left: -1.5rem digunakan supaya nombor anak senarai sejajar lurus dengan teks di atasnya
             return `<li style="list-style-type: none; margin-left: -1.5rem; margin-bottom: 0;">${c}</li>`;
         }
 
-        // 2. Logik data biasa: Auto-Bold pada perkataan sebelum titik bertindih (:)
         let firstColon = c.indexOf(':');
         if (firstColon !== -1) {
             let title = c.substring(0, firstColon);
             let desc = c.substring(firstColon + 1);
             
-            // Keselamatan jika titik bertindih ada di dalam kod warna HTML
             if (title.includes('style="') && !title.substring(title.indexOf('style="')).includes('">')) {
                 let nextColon = c.indexOf(':', firstColon + 1);
                 if (nextColon !== -1) {
@@ -343,13 +382,10 @@ function renderSearchCard() {
                     desc = c.substring(nextColon + 1);
                 }
             }
-            return `<li><strong>${title}:</strong>${desc}</li>`;
+            return `<li>export <strong>${title}:</strong>${desc}</li>`;
         }
-        
-        // 3. Paparan teks biasa
         return `<li>${c}</li>`;
     }).join("");
-    // =========================================================================
 
     let generatedCustomSectionHtml = "";
     if (selectedSearchItem.table_data && selectedSearchItem.table_data.custom_title) {
@@ -358,7 +394,7 @@ function renderSearchCard() {
             : "";
         generatedCustomSectionHtml = `
             <div class="section-title" style="margin-top: 18px;">${selectedSearchItem.table_data.custom_title}:</div>
-            <div class="custom-content-block" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
+            <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
         `;
     }
 
@@ -372,7 +408,7 @@ function renderSearchCard() {
                     <thead>
                         <tr>
                             <th>${tData.headers[0] || ""}</th>
-                            <th style="text-align: right;">${tData.headers[1] || ""}</th>
+                            <th>${tData.headers[1] || ""}</th>
                             <th>${tData.headers[2] || ""}</th>
                         </tr>
                     </thead>
@@ -380,7 +416,7 @@ function renderSearchCard() {
                         ${tData.rows.map(row => `
                             <tr>
                                 <td>${row[0] || ""}</td>
-                                <td class="arabic-text">${row[1] || ""}</td>
+                                <td>${row[1] || ""}</td>
                                 <td>${row[2] || ""}</td>
                             </tr>
                         `).join("")}
