@@ -6,7 +6,6 @@
     <title>Sistem Istilah Bahasa Arab</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* --- Reka Bentuk Asas & Pembolehubah --- */
         :root {
             --primary-color: #2c3e50;
             --accent-color: #3498db;
@@ -29,14 +28,12 @@
         header h1 { font-size: 1.8rem; color: var(--primary-color); margin-bottom: 4px; }
         header p { color: var(--text-muted); font-size: 0.95rem; }
 
-        /* --- Menu Navigasi --- */
         .nav-tabs { display: flex; background-color: #edf2f7; padding: 4px; border-radius: 8px; margin-bottom: 24px; gap: 4px; }
         .nav-btn { flex: 1; padding: 10px; border: none; background: none; font-weight: 600; color: var(--primary-color); font-size: 0.95rem; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-align: center; }
         .nav-btn.active { background-color: var(--card-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.05); color: var(--accent-color); }
         .view-section { display: none; }
         .view-section.active { display: block; }
 
-        /* --- Gaya Butang & Input --- */
         .btn { padding: 10px 16px; font-size: 0.9rem; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 6px; }
         .btn-primary { background-color: var(--accent-color); color: white; }
         .btn-primary:hover { background-color: #2980b9; }
@@ -51,7 +48,6 @@
         .form-control { width: 100%; padding: 12px 14px; font-size: 0.95rem; border: 2px solid var(--border-color); border-radius: var(--radius); outline: none; background-color: var(--card-bg); transition: border-color 0.2s; }
         .form-control:focus { border-color: var(--accent-color); }
 
-        /* --- Halaman Carian --- */
         .search-wrapper { position: relative; margin-bottom: 24px; }
         .suggestions-list { position: absolute; top: 100%; left: 0; right: 0; background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); margin-top: 6px; max-height: 250px; overflow-y: auto; z-index: 100; display: none; }
         .suggestion-item { padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bg-color); }
@@ -61,7 +57,6 @@
         .suggestion-arabic { font-family: var(--font-arabic); font-size: 1.2rem; color: var(--accent-color); }
         .no-match-item { padding: 14px 16px; color: var(--text-muted); text-align: center; }
 
-        /* --- Panel Admin & Borang --- */
         .admin-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .form-section { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: none; }
         .form-section.active { display: block; }
@@ -71,21 +66,18 @@
         .form-control.arabic-input { font-family: var(--font-arabic); font-size: 1.3rem; direction: rtl; text-align: right; }
         .form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
 
-        /* --- Alat Format Teks --- */
         .text-toolbar { display: inline-flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 6px; align-items: center; flex-wrap: wrap; }
         .toolbar-btn { background: white; border: 1px solid var(--border-color); padding: 4px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border-radius: 4px; color: var(--primary-color); display: flex; align-items: center; justify-content: center; min-width: 32px; height: 32px; transition: all 0.2s; }
         .toolbar-btn:hover { background: var(--accent-color); color: white; border-color: var(--accent-color); }
         .color-picker-wrapper { display: flex; align-items: center; justify-content: center; background: white; border: 1px solid var(--border-color); border-radius: 4px; width: 32px; height: 32px; cursor: pointer; overflow: hidden; position: relative; }
         .toolbar-color { border: none; width: 40px; height: 40px; padding: 0; cursor: pointer; background: none; position: absolute; transform: scale(1.4); }
 
-        /* --- Pembangun Jadual --- */
         .table-builder-box { background: #fdfdfd; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-top: 12px; }
         .builder-label { color: var(--accent-color) !important; margin-bottom: 10px; }
         .builder-header-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
         .builder-rows-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
         .builder-row-item { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
 
-        /* --- Paparan Utama & Penyelarasan List --- */
         .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px; }
         .card-title-group .title-ms { font-size: 1.3rem; font-weight: 700; color: var(--primary-color); }
@@ -198,7 +190,6 @@
                                 <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'u')"><u>U</u></button>
                                 <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'i')"><i>I</i></button>
                                 <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'bullet')">• Senarai</button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'number')">1. Senarai</button>
                                 <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('definition', 'color', this.value)"></div>
                             </div>
                             <textarea id="definition" class="form-control" rows="3" placeholder="Masukkan maksud istilah..." required></textarea>
@@ -211,30 +202,23 @@
                                 <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'u')"><u>U</u></button>
                                 <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'i')"><i>I</i></button>
                                 <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'bullet')">• Senarai</button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'number')">1. Senarai</button>
                                 <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('characteristics', 'color', this.value)"></div>
                             </div>
                             <textarea id="characteristics" class="form-control" rows="4" placeholder="Ciri 1&#10;Ciri 2" required></textarea>
                         </div>
 
-                        <div class="form-group" style="background: #fdfdfd; padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 16px;">
-                            <label style="color: var(--primary-color); font-weight: 700;">Seksyen Tambahan (Subtajuk & Penerangan Khas)</label>
-                            <div class="form-group" style="margin-top: 8px;">
-                                <label for="customTitle">Subtajuk Khas (Pilihan)</label>
-                                <input type="text" id="customTitle" class="form-control" placeholder="Contoh: Kaedah Penggunaan / Nota Penting">
+                        <div class="form-group table-builder-box">
+                            <label class="builder-label" style="font-weight: 700; color: var(--primary-color) !important;">Seksyen Tambahan (Subtajuk & Penerangan Khas)</label>
+                            
+                            <!-- KEMASKINI BARU: TAJUK BESAR SEKSYEN (STATIK) -->
+                            <div class="form-group" style="margin-top: 8px; border-bottom: 2px dashed var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
+                                <label for="customMainTitle" style="color: var(--accent-color);">Tajuk Besar Seksyen (Pilihan)</label>
+                                <input type="text" id="customMainTitle" class="form-control" placeholder="Contoh: Golongan Kata yang Mabni">
                             </div>
-                            <div class="form-group" style="margin-bottom:0;">
-                                <label for="customContent">Penerangan Khas</label>
-                                <div class="text-toolbar">
-                                    <button type="button" class="toolbar-btn" onclick="applyFormat('customContent', 'b')">B</button>
-                                    <button type="button" class="toolbar-btn" onclick="applyFormat('customContent', 'u')"><u>U</u></button>
-                                    <button type="button" class="toolbar-btn" onclick="applyFormat('customContent', 'i')"><i>I</i></button>
-                                    <button type="button" class="toolbar-btn" onclick="applyFormat('customContent', 'bullet')">• Senarai</button>
-                                    <button type="button" class="toolbar-btn" onclick="applyFormat('customContent', 'number')">1. Senarai</button>
-                                    <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('customContent', 'color', this.value)"></div>
-                                </div>
-                                <textarea id="customContent" class="form-control" rows="3" placeholder="Masukkan penerangan lengkap seksyen khas ini..."></textarea>
-                            </div>
+
+                            <div id="customSectionsContainer"></div>
+                            
+                            <button type="button" class="btn btn-primary" id="btnTambahSeksyenKhas" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 8px;">+ Tambah Penerangan Khas</button>
                         </div>
 
                         <div class="form-group table-builder-box">
