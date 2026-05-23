@@ -220,6 +220,11 @@
                         <div class="form-group table-builder-box">
                             <label class="builder-label">Pembangun Jadual Contoh (Pilihan)</label>
                             
+                            <div class="form-group" style="margin-top: 8px; margin-bottom: 16px;">
+                                <label for="tableTitleInput" style="color: var(--accent-color);">Tajuk Jadual (Pilihan)</label>
+                                <input type="text" id="tableTitleInput" class="form-control" placeholder="Contoh: Contoh Struktur / Tasrif">
+                            </div>
+                            
                             <div class="text-toolbar" style="margin-bottom: 12px; width: 100%;">
                                 <button type="button" class="toolbar-btn" onclick="applyTableFormat('b')" title="Tebal (Bold)">B</button>
                                 <button type="button" class="toolbar-btn" onclick="applyTableFormat('u')" title="Garis Bawah (Underline)"><u>U</u></button>
@@ -244,6 +249,11 @@
                             <button type="submit" class="btn btn-success">Simpan Data ke SQL</button>
                         </div>
                     </form>
+                </div>
+
+                <div style="margin-top: 32px; margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                    <h3 style="color: var(--primary-color); margin: 0;">Senarai Istilah Pangkalan Data</h3>
+                    <input type="text" id="adminSearchInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari nama istilah, kategori, dll...">
                 </div>
 
                 <div class="table-container">
