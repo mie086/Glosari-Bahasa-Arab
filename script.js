@@ -221,7 +221,10 @@ termForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
     const id = inputId.value || "term-" + Date.now();
-    const chrArray = inputCharacteristics.value.split("\n").filter(line => line.trim() !== "");
+    
+    // KEMASKINI 1: Buang `.filter(...)` supaya baris kosong (enter) dikekalkan sebagai jarak perenggan.
+    const chrArray = inputCharacteristics.value.split("\n");
+    
     const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
 
     const rowItems = builderRowsContainer.querySelectorAll(".builder-row-item");
@@ -373,27 +376,10 @@ function renderSearchCard() {
     const card = document.createElement("div");
     card.className = "card";
     
-    const chrHTML = selectedSearchItem.characteristics.map(c => {
-        if (c.includes('<ul>')) {
-            return `<li style="list-style-type: none; margin-left: -1.5rem; margin-bottom: 0;">${c}</li>`;
-        }
-
-        let firstColon = c.indexOf(':');
-        if (firstColon !== -1) {
-            let title = c.substring(0, firstColon);
-            let desc = c.substring(firstColon + 1);
-            
-            if (title.includes('style="') && !title.substring(title.indexOf('style="')).includes('">')) {
-                let nextColon = c.indexOf(':', firstColon + 1);
-                if (nextColon !== -1) {
-                    title = c.substring(0, nextColon);
-                    desc = c.substring(nextColon + 1);
-                }
-            }
-            return `<li><strong>${title}:</strong>${desc}</li>`;
-        }
-        return `<li>${c}</li>`;
-    }).join("");
+    // KEMASKINI 2: Membuang balutan <li> dan mencantumkan kembali teks dengan tag <br> 
+    let formattedCharacteristics = selectedSearchItem.characteristics 
+        ? selectedSearchItem.characteristics.join("<br>") 
+        : "";
 
     let generatedCustomSectionHtml = "";
     if (selectedSearchItem.table_data) {
@@ -460,6 +446,7 @@ function renderSearchCard() {
         ? selectedSearchItem.definition.replace(/\n/g, "<br>") 
         : "";
 
+    // KEMASKINI 3: Menggunakan <div class="definition"> dan bukannya <ul> untuk Ciri-ciri Utama
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title-group">
@@ -474,7 +461,7 @@ function renderSearchCard() {
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
                 <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">Ciri-Ciri Utama:</span>
             </div>
-            <ul class="characteristics-list inline-bullet-list">${chrHTML}</ul>
+            <div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>
             
             ${generatedCustomSectionHtml}
             ${generatedTableHtml}
