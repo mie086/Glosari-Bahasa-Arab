@@ -100,7 +100,7 @@ window.applyTableFormat = function(type, colorValue = null) {
     let tagClose = "";
 
     switch (type) {
-        case 'b': tagOpen = '<span style="font-weight: bold; font-size: 1.2rem;">'; tagClose = "</span>"; break;
+        case 'b': tagOpen = "<b>"; tagClose = "</b>"; break;
         case 'u': tagOpen = "<u>"; tagClose = "</u>"; break;
         case 'i': tagOpen = "<i>"; tagClose = "</i>"; break;
         case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; break;
@@ -130,7 +130,7 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
 
     switch (type) {
         case 'b':
-            tagOpen = '<span style="font-weight: bold; font-size: 1.2rem;">'; tagClose = "</span>";
+            tagOpen = "<b>"; tagClose = "</b>"; 
             modifiedText = tagOpen + selectedText + tagClose;
             break;
         case 'u':
