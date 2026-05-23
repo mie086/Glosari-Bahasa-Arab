@@ -78,7 +78,6 @@ function createCustomSectionInput(titleVal = "", contentVal = "") {
 
 btnTambahSeksyenKhas.addEventListener("click", () => createCustomSectionInput());
 
-
 document.addEventListener('focusin', function(e) {
     if (e.target && e.target.classList.contains('table-input-target')) {
         lastFocusedTableInput = e.target;
@@ -101,7 +100,7 @@ window.applyTableFormat = function(type, colorValue = null) {
     let tagClose = "";
 
     switch (type) {
-        case 'b': tagOpen = "<b>"; tagClose = "</b>"; break;
+        case 'b': tagOpen = '<span style="font-weight: bold; font-size: 1.2rem;">'; tagClose = "</span>"; break;
         case 'u': tagOpen = "<u>"; tagClose = "</u>"; break;
         case 'i': tagOpen = "<i>"; tagClose = "</i>"; break;
         case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; break;
@@ -131,7 +130,7 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
 
     switch (type) {
         case 'b':
-            tagOpen = "<b>"; tagClose = "</b>";
+            tagOpen = '<span style="font-weight: bold; font-size: 1.2rem;">'; tagClose = "</span>";
             modifiedText = tagOpen + selectedText + tagClose;
             break;
         case 'u':
@@ -148,10 +147,10 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
             break;
         case 'bullet':
             if (selectedText.trim().length > 0) {
-                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line}</li>` : '').filter(l => l).join('');
-                modifiedText = `<ul>${lines}</ul>`;
+                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line.trim()}</li>` : '').filter(l => l).join(' ');
+                modifiedText = `<ul class="inline-bullet-list">${lines}</ul>`;
             } else {
-                modifiedText = "<ul><li>Teks Senarai</li></ul>";
+                modifiedText = `<ul class="inline-bullet-list"><li>Teks Senarai</li></ul>`;
             }
             break;
     }
@@ -411,7 +410,7 @@ function renderSearchCard() {
             let formattedContent = selectedSearchItem.table_data.custom_content ? selectedSearchItem.table_data.custom_content.replace(/\n/g, "<br>") : "";
             let oldTitle = selectedSearchItem.table_data.custom_title || 'Penerangan Tambahan';
             generatedCustomSectionHtml += `
-                <div class="section-title" style="margin-top: 18px;">${oldTitle}:</div>
+                <div style="margin-top: 18px; margin-bottom: 8px; font-size: 1.15rem; font-weight: bold; color: var(--primary-color);">${oldTitle}:</div>
                 <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
             `;
         }
@@ -419,7 +418,7 @@ function renderSearchCard() {
         if (selectedSearchItem.table_data.custom_sections && selectedSearchItem.table_data.custom_sections.length > 0) {
             selectedSearchItem.table_data.custom_sections.forEach(sec => {
                 let formattedContent = sec.content ? sec.content.replace(/\n/g, "<br>") : "";
-                let titleHtml = sec.title ? `<div class="section-title" style="margin-top: 18px;">${sec.title}:</div>` : '';
+                let titleHtml = sec.title ? `<div style="margin-top: 18px; margin-bottom: 8px; font-size: 1.15rem; font-weight: bold; color: var(--primary-color);">${sec.title}:</div>` : '';
                 generatedCustomSectionHtml += `
                     ${titleHtml}
                     <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
@@ -428,9 +427,6 @@ function renderSearchCard() {
         }
     }
 
-    // =========================================================================
-    // KEMASKINI: TAJUK JADUAL SEKARANG MENGGUNAKAN GAYA TAJUK BESAR
-    // =========================================================================
     let generatedTableHtml = "";
     const tData = selectedSearchItem.table_data;
     if (tData && tData.headers && tData.headers.some(h => h !== "") && tData.rows && tData.rows.length > 0) {
@@ -443,8 +439,8 @@ function renderSearchCard() {
                     <thead>
                         <tr>
                             <th>${tData.headers[0] || ""}</th>
-                            <th>${tData.headers[1] || ""}</th>
-                            <th>${tData.headers[2] || ""}</th>
+                            <th style="text-align: center;">${tData.headers[1] || ""}</th>
+                            <th style="text-align: center;">${tData.headers[2] || ""}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -460,9 +456,10 @@ function renderSearchCard() {
             </div>`;
     }
 
-    // =========================================================================
-    // KEMASKINI: TAJUK CIRI-CIRI UTAMA MENGGUNAKAN GAYA TAJUK BESAR
-    // =========================================================================
+    let formattedDefinition = selectedSearchItem.definition 
+        ? selectedSearchItem.definition.replace(/\n/g, "<br>") 
+        : "";
+
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title-group">
@@ -472,12 +469,12 @@ function renderSearchCard() {
             <div class="title-ar">${selectedSearchItem.title_ar}</div>
         </div>
         <div class="card-body">
-            <div class="definition">${selectedSearchItem.definition}</div>
+            <div class="definition">${formattedDefinition}</div>
             
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
                 <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">Ciri-Ciri Utama:</span>
             </div>
-            <ul class="characteristics-list">${chrHTML}</ul>
+            <ul class="characteristics-list inline-bullet-list">${chrHTML}</ul>
             
             ${generatedCustomSectionHtml}
             ${generatedTableHtml}
