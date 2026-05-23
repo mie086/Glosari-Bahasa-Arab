@@ -195,16 +195,12 @@
                             <textarea id="definition" class="form-control" rows="3" placeholder="Masukkan maksud istilah..." required></textarea>
                         </div>
 
-                        <div class="form-group">
-                            <label for="characteristics">Ciri-Ciri Utama (Satu ciri per baris)</label>
-                            <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'b')">B</button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'u')"><u>U</u></button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'i')"><i>I</i></button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('characteristics', 'bullet')">• Senarai</button>
-                                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('characteristics', 'color', this.value)"></div>
-                            </div>
-                            <textarea id="characteristics" class="form-control" rows="4" placeholder="Ciri 1&#10;Ciri 2" required></textarea>
+                        <div class="form-group table-builder-box">
+                            
+                            <!-- Bekas untuk menjana kotak ciri-ciri dinamik -->
+                            <div id="ciriSectionsContainer"></div>
+                            
+                            <button type="button" class="btn btn-primary" id="btnTambahCiri" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 8px;">+ Tambah Ciri-Ciri Utama</button>
                         </div>
 
                         <div class="form-group table-builder-box">
