@@ -1,14 +1,8 @@
-// =========================================================================
-// 1. KONFIGURASI PROJEK SUPABASE
-// =========================================================================
 const SUPABASE_URL = "https://ejivaczazdimurhtlmsj.supabase.co"; 
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqaXZhY3phemRpbXVyaHRsbXNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMzEzMjAsImV4cCI6MjA5NDgwNzMyMH0._pjuat4uPjujjRiZyj1331vySeMXPGU_SGpzdfkfSSg";
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// =========================================================================
-// 2. STATE MANAGEMENT & ELEMEN DOM
-// =========================================================================
 let dataIstilah = [];
 let currentSearch = "";
 let selectedSearchItem = null;
@@ -31,8 +25,11 @@ const termForm = document.getElementById("termForm");
 const btnBukaBorang = document.getElementById("btnBukaBorang");
 const btnBatal = document.getElementById("btnBatal");
 const formTitle = document.getElementById("formTitle");
+
 const builderRowsContainer = document.getElementById("builderRowsContainer");
 const btnTambahBarisJadual = document.getElementById("btnTambahBarisJadual");
+const customSectionsContainer = document.getElementById("customSectionsContainer");
+const btnTambahSeksyenKhas = document.getElementById("btnTambahSeksyenKhas");
 
 const inputId = document.getElementById("termId");
 const inputTitleMs = document.getElementById("titleMs");
@@ -45,12 +42,43 @@ const th1 = document.getElementById("th1");
 const th2 = document.getElementById("th2");
 const th3 = document.getElementById("th3");
 
-const inputCustomTitle = document.getElementById("customTitle");
-const inputCustomContent = document.getElementById("customContent");
+const inputCustomMainTitle = document.getElementById("customMainTitle");
 
-// =========================================================================
-// 3. LOGIK TOOLBAR UNTUK JADUAL DINAMIK
-// =========================================================================
+function createCustomSectionInput(titleVal = "", contentVal = "") {
+    const uniqueId = "customContent_" + Date.now() + Math.floor(Math.random() * 1000);
+
+    const sectionDiv = document.createElement("div");
+    sectionDiv.className = "custom-section-item";
+    sectionDiv.style = "background: #fff; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; position: relative;";
+    
+    sectionDiv.innerHTML = `
+        <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
+        
+        <div class="form-group" style="margin-top: 4px; margin-right: 40px;">
+            <label>Subtajuk Khas (Pilihan)</label>
+            <input type="text" class="form-control custom-title-input" placeholder="Contoh: Kaedah Penggunaan / Nota Penting" value="${titleVal}">
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Penerangan Khas</label>
+            <div class="text-toolbar">
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'u')"><u>U</u></button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'i')"><i>I</i></button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'bullet')">• Senarai</button>
+                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('${uniqueId}', 'color', this.value)"></div>
+            </div>
+            <textarea id="${uniqueId}" class="form-control custom-content-input" rows="3" placeholder="Masukkan penerangan lengkap seksyen khas ini...">${contentVal}</textarea>
+        </div>
+    `;
+
+    sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
+    customSectionsContainer.appendChild(sectionDiv);
+}
+
+btnTambahSeksyenKhas.addEventListener("click", () => createCustomSectionInput());
+
+
 document.addEventListener('focusin', function(e) {
     if (e.target && e.target.classList.contains('table-input-target')) {
         lastFocusedTableInput = e.target;
@@ -88,11 +116,10 @@ window.applyTableFormat = function(type, colorValue = null) {
     input.dispatchEvent(new Event('input'));
 };
 
-// =========================================================================
-// 4. LOGIK FORMAT TEKS (TEXTAREA) + ALGORITMA AUTO-MERGE LIST
-// =========================================================================
 window.applyFormat = function(textareaId, type, colorValue = null) {
     const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const originalText = textarea.value;
@@ -127,27 +154,10 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
                 modifiedText = "<ul><li>Teks Senarai</li></ul>";
             }
             break;
-        case 'number':
-            if (selectedText.trim().length > 0) {
-                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line}</li>` : '').filter(l => l).join('');
-                modifiedText = `<ol>${lines}</ol>`;
-            } else {
-                modifiedText = "<ol><li>Teks Senarai</li></ol>";
-            }
-            break;
     }
 
-    // Suntik teks yang telah diformat ke posisi asal kursor
     textarea.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
-
-    // =========================================================================
-    // TINDAKAN PERBAIKAN: SEAMLESS AUTO-MERGE REGEX ALGORITHM
-    // Menyerap dan menyatukan tag </ol><ol> bersebelahan menjadi satu kumpulan tunggal
-    // =========================================================================
-    textarea.value = textarea.value
-        .replace(/<\/ol>([\s\n]*?)<ol>/gi, '$1')
-        .replace(/<\/ul>([\s\n]*?)<ul>/gi, '$1');
-    // =========================================================================
+    textarea.value = textarea.value.replace(/<\/ul>([\s\n]*?)<ul>/gi, '$1');
 
     textarea.focus();
     textarea.selectionStart = start;
@@ -155,9 +165,6 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
     textarea.dispatchEvent(new Event('input'));
 };
 
-// =========================================================================
-// 5. LOGIK AUTENTIKASI (PENGESAHAN USER UNTUK RLS TINGGI)
-// =========================================================================
 async function checkUserSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     updateAdminUI(session);
@@ -197,9 +204,6 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
     updateAdminUI(session);
 });
 
-// =========================================================================
-// 6. OPERASI CRUD PANGKALAN DATA (SUPABASE API)
-// =========================================================================
 async function loadDataFromSupabase() {
     const { data, error } = await supabaseClient
         .from('istilah_arab')
@@ -230,11 +234,19 @@ termForm.addEventListener("submit", async (e) => {
         if (v1 || v2 || v3) rowsData.push([v1, v2, v3]);
     });
 
+    const customSectionElements = customSectionsContainer.querySelectorAll(".custom-section-item");
+    const customSectionsData = [];
+    customSectionElements.forEach(item => {
+        const titleVal = item.querySelector(".custom-title-input").value.trim();
+        const contentVal = item.querySelector(".custom-content-input").value.trim();
+        if (titleVal || contentVal) customSectionsData.push({ title: titleVal, content: contentVal });
+    });
+
     const tableDataObject = {
         headers: [th1.value, th2.value, th3.value],
         rows: rowsData,
-        custom_title: inputCustomTitle.value.trim(),
-        custom_content: inputCustomContent.value.trim()
+        main_custom_title: inputCustomMainTitle.value.trim(),
+        custom_sections: customSectionsData
     };
 
     const termObject = {
@@ -281,9 +293,6 @@ window.deleteItem = async function(id) {
     }
 };
 
-// =========================================================================
-// 7. INTERFASI KUMPULAN JADUAL & HUBUNGAN UI
-// =========================================================================
 function createTableRowInput(val1 = "", val2 = "", val3 = "") {
     const rowDiv = document.createElement("div");
     rowDiv.className = "builder-row-item";
@@ -366,7 +375,7 @@ function renderSearchCard() {
     card.className = "card";
     
     const chrHTML = selectedSearchItem.characteristics.map(c => {
-        if (c.includes('<ol>') || c.includes('<ul>')) {
+        if (c.includes('<ul>')) {
             return `<li style="list-style-type: none; margin-left: -1.5rem; margin-bottom: 0;">${c}</li>`;
         }
 
@@ -382,27 +391,53 @@ function renderSearchCard() {
                     desc = c.substring(nextColon + 1);
                 }
             }
-            return `<li>export <strong>${title}:</strong>${desc}</li>`;
+            return `<li><strong>${title}:</strong>${desc}</li>`;
         }
         return `<li>${c}</li>`;
     }).join("");
 
     let generatedCustomSectionHtml = "";
-    if (selectedSearchItem.table_data && selectedSearchItem.table_data.custom_title) {
-        let formattedContent = selectedSearchItem.table_data.custom_content 
-            ? selectedSearchItem.table_data.custom_content.replace(/\n/g, "<br>") 
-            : "";
-        generatedCustomSectionHtml = `
-            <div class="section-title" style="margin-top: 18px;">${selectedSearchItem.table_data.custom_title}:</div>
-            <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
-        `;
+    if (selectedSearchItem.table_data) {
+        
+        if (selectedSearchItem.table_data.main_custom_title) {
+            generatedCustomSectionHtml += `
+                <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
+                    <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${selectedSearchItem.table_data.main_custom_title}</span>
+                </div>
+            `;
+        }
+
+        if (selectedSearchItem.table_data.custom_title || selectedSearchItem.table_data.custom_content) {
+            let formattedContent = selectedSearchItem.table_data.custom_content ? selectedSearchItem.table_data.custom_content.replace(/\n/g, "<br>") : "";
+            let oldTitle = selectedSearchItem.table_data.custom_title || 'Penerangan Tambahan';
+            generatedCustomSectionHtml += `
+                <div class="section-title" style="margin-top: 18px;">${oldTitle}:</div>
+                <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
+            `;
+        }
+
+        if (selectedSearchItem.table_data.custom_sections && selectedSearchItem.table_data.custom_sections.length > 0) {
+            selectedSearchItem.table_data.custom_sections.forEach(sec => {
+                let formattedContent = sec.content ? sec.content.replace(/\n/g, "<br>") : "";
+                let titleHtml = sec.title ? `<div class="section-title" style="margin-top: 18px;">${sec.title}:</div>` : '';
+                generatedCustomSectionHtml += `
+                    ${titleHtml}
+                    <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
+                `;
+            });
+        }
     }
 
+    // =========================================================================
+    // KEMASKINI: TAJUK JADUAL SEKARANG MENGGUNAKAN GAYA TAJUK BESAR
+    // =========================================================================
     let generatedTableHtml = "";
     const tData = selectedSearchItem.table_data;
     if (tData && tData.headers && tData.headers.some(h => h !== "") && tData.rows && tData.rows.length > 0) {
         generatedTableHtml = `
-            <div class="section-title">Contoh Struktur / Tasrif:</div>
+            <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
+                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">Contoh Struktur / Tasrif:</span>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
@@ -425,6 +460,9 @@ function renderSearchCard() {
             </div>`;
     }
 
+    // =========================================================================
+    // KEMASKINI: TAJUK CIRI-CIRI UTAMA MENGGUNAKAN GAYA TAJUK BESAR
+    // =========================================================================
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title-group">
@@ -435,7 +473,10 @@ function renderSearchCard() {
         </div>
         <div class="card-body">
             <div class="definition">${selectedSearchItem.definition}</div>
-            <div class="section-title">Ciri-Ciri Utama:</div>
+            
+            <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
+                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">Ciri-Ciri Utama:</span>
+            </div>
             <ul class="characteristics-list">${chrHTML}</ul>
             
             ${generatedCustomSectionHtml}
@@ -476,20 +517,29 @@ window.editItem = function(id) {
     inputCharacteristics.value = item.characteristics.join("\n");
     
     builderRowsContainer.innerHTML = "";
+    customSectionsContainer.innerHTML = ""; 
+
     if (item.table_data) {
         th1.value = item.table_data.headers ? (item.table_data.headers[0] || "") : "";
         th2.value = item.table_data.headers ? (item.table_data.headers[1] || "") : "";
         th3.value = item.table_data.headers ? (item.table_data.headers[2] || "") : "";
         
-        inputCustomTitle.value = item.table_data.custom_title || "";
-        inputCustomContent.value = item.table_data.custom_content || "";
+        inputCustomMainTitle.value = item.table_data.main_custom_title || "";
+
+        if (item.table_data.custom_title || item.table_data.custom_content) {
+            createCustomSectionInput(item.table_data.custom_title || "", item.table_data.custom_content || "");
+        }
+        
+        if (item.table_data.custom_sections && item.table_data.custom_sections.length > 0) {
+            item.table_data.custom_sections.forEach(sec => createCustomSectionInput(sec.title, sec.content));
+        }
 
         if (item.table_data.rows) {
             item.table_data.rows.forEach(row => createTableRowInput(row[0], row[1], row[2]));
         }
     } else {
         th1.value = ""; th2.value = ""; th3.value = "";
-        inputCustomTitle.value = ""; inputCustomContent.value = "";
+        inputCustomMainTitle.value = ""; 
     }
 
     formSection.classList.add("active");
@@ -500,10 +550,13 @@ btnBukaBorang.addEventListener("click", () => {
     termForm.reset();
     inputId.value = "";
     builderRowsContainer.innerHTML = "";
-    inputCustomTitle.value = "";
-    inputCustomContent.value = "";
+    customSectionsContainer.innerHTML = "";
+    inputCustomMainTitle.value = ""; 
+    
     formTitle.textContent = "Tambah Istilah Baru";
     formSection.classList.add("active");
+    
+    createCustomSectionInput(); 
     createTableRowInput();
     createTableRowInput();
 });
@@ -514,8 +567,8 @@ function closeForm() {
     termForm.reset(); 
     inputId.value = ""; 
     builderRowsContainer.innerHTML = "";
-    inputCustomTitle.value = "";
-    inputCustomContent.value = "";
+    customSectionsContainer.innerHTML = "";
+    inputCustomMainTitle.value = ""; 
 }
 
 searchInput.addEventListener("input", handleSearchInput);
