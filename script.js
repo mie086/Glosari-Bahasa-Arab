@@ -16,6 +16,7 @@ const resultsList = document.getElementById("resultsList");
 
 const adminAuthBox = document.getElementById("adminAuthBox");
 const adminDashboardBox = document.getElementById("adminDashboardBox");
+const adminSearchInput = document.getElementById("adminSearchInput");
 const loginForm = document.getElementById("loginForm");
 const btnLogKeluar = document.getElementById("btnLogKeluar");
 
@@ -44,6 +45,7 @@ const th1 = document.getElementById("th1");
 const th2 = document.getElementById("th2");
 const th3 = document.getElementById("th3");
 const inputCustomMainTitle = document.getElementById("customMainTitle");
+const tableTitleInput = document.getElementById("tableTitleInput");
 
 // =========================================================================
 // SUNTIKAN BARU: PENJANA KOTAK DINAMIK CIRI-CIRI UTAMA
@@ -298,6 +300,7 @@ termForm.addEventListener("submit", async (e) => {
     });
 
     const tableDataObject = {
+        table_title: tableTitleInput.value.trim(),
         headers: [th1.value, th2.value, th3.value],
         rows: rowsData,
         main_custom_title: inputCustomMainTitle.value.trim(),
@@ -489,9 +492,13 @@ function renderSearchCard() {
     let generatedTableHtml = "";
     const tData = selectedSearchItem.table_data;
     if (tData && tData.headers && tData.headers.some(h => h !== "") && tData.rows && tData.rows.length > 0) {
+        
+        // KEMASKINI: Baca tajuk dari pangkalan data, atau guna nama lalai jika kosong
+        const tableTitle = tData.table_title || "Contoh Struktur / Tasrif:";
+
         generatedTableHtml = `
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
-                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">Contoh Struktur / Tasrif:</span>
+                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${tableTitle}</span>
             </div>
             <div class="table-container">
                 <table>
@@ -538,9 +545,23 @@ function renderSearchCard() {
     resultsList.appendChild(card);
 }
 
-function renderAdminList() {
+function renderAdminList(filterText = "") {
     adminTableBody.innerHTML = "";
-    dataIstilah.forEach(item => {
+    const lowerFilter = filterText.toLowerCase();
+
+    const filteredData = dataIstilah.filter(item => {
+        return item.title_ms.toLowerCase().includes(lowerFilter) || 
+               item.title_ar.includes(lowerFilter) ||
+               (item.category && item.category.toLowerCase().includes(lowerFilter)) ||
+               (item.keywords && item.keywords.some(kw => kw.includes(lowerFilter)));
+    });
+
+    if (filteredData.length === 0) {
+        adminTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Tiada istilah yang sepadan dengan carian anda.</td></tr>`;
+        return;
+    }
+
+    filteredData.forEach(item => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td><strong>${item.title_ms}</strong></td>
@@ -553,6 +574,12 @@ function renderAdminList() {
                 </div>
             </td>`;
         adminTableBody.appendChild(tr);
+    });
+}
+
+if (adminSearchInput) {
+    adminSearchInput.addEventListener("input", (e) => {
+        renderAdminList(e.target.value.trim());
     });
 }
 
@@ -602,6 +629,7 @@ window.editItem = function(id) {
     }
 
     if (item.table_data) {
+        tableTitleInput.value = item.table_data.table_title || "";
         th1.value = item.table_data.headers ? (item.table_data.headers[0] || "") : "";
         th2.value = item.table_data.headers ? (item.table_data.headers[1] || "") : "";
         th3.value = item.table_data.headers ? (item.table_data.headers[2] || "") : "";
@@ -620,6 +648,7 @@ window.editItem = function(id) {
             item.table_data.rows.forEach(row => createTableRowInput(row[0], row[1], row[2]));
         }
     } else {
+        tableTitleInput.value = "";
         th1.value = ""; th2.value = ""; th3.value = "";
         inputCustomMainTitle.value = ""; 
     }
@@ -635,6 +664,7 @@ btnBukaBorang.addEventListener("click", () => {
     customSectionsContainer.innerHTML = "";
     ciriSectionsContainer.innerHTML = "";
     inputCustomMainTitle.value = ""; 
+    tableTitleInput.value = "";
     
     formTitle.textContent = "Tambah Istilah Baru";
     formSection.classList.add("active");
