@@ -26,6 +26,9 @@ const btnBukaBorang = document.getElementById("btnBukaBorang");
 const btnBatal = document.getElementById("btnBatal");
 const formTitle = document.getElementById("formTitle");
 
+// Pautan Elemen Dinamik UI Baru & Lama
+const ciriSectionsContainer = document.getElementById("ciriSectionsContainer");
+const btnTambahCiri = document.getElementById("btnTambahCiri");
 const builderRowsContainer = document.getElementById("builderRowsContainer");
 const btnTambahBarisJadual = document.getElementById("btnTambahBarisJadual");
 const customSectionsContainer = document.getElementById("customSectionsContainer");
@@ -37,13 +40,55 @@ const inputTitleAr = document.getElementById("titleAr");
 const inputCategory = document.getElementById("category");
 const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
-const inputCharacteristics = document.getElementById("characteristics");
 const th1 = document.getElementById("th1");
 const th2 = document.getElementById("th2");
 const th3 = document.getElementById("th3");
-
 const inputCustomMainTitle = document.getElementById("customMainTitle");
 
+// =========================================================================
+// SUNTIKAN BARU: PENJANA KOTAK DINAMIK CIRI-CIRI UTAMA
+// =========================================================================
+function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "") {
+    const uniqueId = "ciriContent_" + Date.now() + Math.floor(Math.random() * 1000);
+
+    const sectionDiv = document.createElement("div");
+    sectionDiv.className = "ciri-section-item";
+    sectionDiv.style = "background: #fff; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-bottom: 12px; position: relative;";
+    
+    sectionDiv.innerHTML = `
+        <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
+        
+        <div class="form-group" style="margin-top: 4px; margin-right: 40px;">
+            <label>Tajuk Besar (Pilihan)</label>
+            <input type="text" class="form-control ciri-main-title-input" placeholder="Contoh: Baris akhir berubah" value="${mainTitleVal}">
+        </div>
+
+        <div class="form-group" style="margin-top: 4px;">
+            <label>Subtajuk (Pilihan)</label>
+            <input type="text" class="form-control ciri-sub-title-input" placeholder="Contoh: Rafa' / Nasab / Jar" value="${subTitleVal}">
+        </div>
+        
+        <div class="form-group" style="margin-bottom:0;">
+            <label>Penerangan</label>
+            <div class="text-toolbar">
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'u')"><u>U</u></button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'i')"><i>I</i></button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'bullet')">• Senarai</button>
+                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('${uniqueId}', 'color', this.value)"></div>
+            </div>
+            <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${contentVal}</textarea>
+        </div>
+    `;
+
+    sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
+    ciriSectionsContainer.appendChild(sectionDiv);
+}
+btnTambahCiri.addEventListener("click", () => createCiriSectionInput());
+
+// =========================================================================
+// PENJANA KOTAK DINAMIK SEKSYEN TAMBAHAN (KEKAL SAMA)
+// =========================================================================
 function createCustomSectionInput(titleVal = "", contentVal = "") {
     const uniqueId = "customContent_" + Date.now() + Math.floor(Math.random() * 1000);
 
@@ -75,8 +120,8 @@ function createCustomSectionInput(titleVal = "", contentVal = "") {
     sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
     customSectionsContainer.appendChild(sectionDiv);
 }
-
 btnTambahSeksyenKhas.addEventListener("click", () => createCustomSectionInput());
+
 
 document.addEventListener('focusin', function(e) {
     if (e.target && e.target.classList.contains('table-input-target')) {
@@ -130,7 +175,7 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
 
     switch (type) {
         case 'b':
-            tagOpen = "<b>"; tagClose = "</b>"; 
+            tagOpen = "<b>"; tagClose = "</b>";
             modifiedText = tagOpen + selectedText + tagClose;
             break;
         case 'u':
@@ -221,11 +266,19 @@ termForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
     const id = inputId.value || "term-" + Date.now();
-    
-    // KEMASKINI 1: Buang `.filter(...)` supaya baris kosong (enter) dikekalkan sebagai jarak perenggan.
-    const chrArray = inputCharacteristics.value.split("\n");
-    
     const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
+
+    // KEMASKINI PENYIMPANAN: Menangkap data Ciri-Ciri Utama Dinamik dan menyimpannya sebagai JSON String
+    const ciriElements = ciriSectionsContainer.querySelectorAll(".ciri-section-item");
+    const chrArray = [];
+    ciriElements.forEach(item => {
+        const mTitle = item.querySelector(".ciri-main-title-input").value.trim();
+        const sTitle = item.querySelector(".ciri-sub-title-input").value.trim();
+        const content = item.querySelector(".ciri-content-input").value.trim();
+        if (mTitle || sTitle || content) {
+            chrArray.push(JSON.stringify({ mainTitle: mTitle, subTitle: sTitle, content: content }));
+        }
+    });
 
     const rowItems = builderRowsContainer.querySelectorAll(".builder-row-item");
     const rowsData = [];
@@ -376,14 +429,34 @@ function renderSearchCard() {
     const card = document.createElement("div");
     card.className = "card";
     
-    // KEMASKINI 2: Membuang balutan <li> dan mencantumkan kembali teks dengan tag <br> 
-    let formattedCharacteristics = selectedSearchItem.characteristics 
-        ? selectedSearchItem.characteristics.join("<br>") 
-        : "";
+    // KEMASKINI PAPARAN: Menyokong format JSON baharu dan teks Legacy lama untuk Ciri-Ciri Utama
+    let formattedCharacteristics = "";
+    if (selectedSearchItem.characteristics && selectedSearchItem.characteristics.length > 0) {
+        selectedSearchItem.characteristics.forEach(c => {
+            try {
+                if (c.startsWith('{') && c.endsWith('}')) {
+                    const parsed = JSON.parse(c);
+                    if (parsed.mainTitle) {
+                        formattedCharacteristics += `<div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;"><span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${parsed.mainTitle}</span></div>`;
+                    }
+                    if (parsed.subTitle) {
+                        formattedCharacteristics += `<div style="margin-top: 12px; margin-bottom: 8px; font-size: 1.05rem; font-weight: bold; color: var(--primary-color);">${parsed.subTitle}:</div>`;
+                    }
+                    if (parsed.content) {
+                        formattedCharacteristics += `<div class="definition" style="margin-bottom: 16px; line-height: 1.6;">${parsed.content.replace(/\n/g, "<br>")}</div>`;
+                    }
+                } else {
+                    // Teks Legacy lama
+                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${c.replace(/\n/g, "<br>")}</div>`;
+                }
+            } catch (e) {
+                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${c.replace(/\n/g, "<br>")}</div>`;
+            }
+        });
+    }
 
     let generatedCustomSectionHtml = "";
     if (selectedSearchItem.table_data) {
-        
         if (selectedSearchItem.table_data.main_custom_title) {
             generatedCustomSectionHtml += `
                 <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
@@ -446,7 +519,6 @@ function renderSearchCard() {
         ? selectedSearchItem.definition.replace(/\n/g, "<br>") 
         : "";
 
-    // KEMASKINI 3: Menggunakan <div class="definition"> dan bukannya <ul> untuk Ciri-ciri Utama
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title-group">
@@ -458,9 +530,6 @@ function renderSearchCard() {
         <div class="card-body">
             <div class="definition">${formattedDefinition}</div>
             
-            <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
-                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">Ciri-Ciri Utama:</span>
-            </div>
             <div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>
             
             ${generatedCustomSectionHtml}
@@ -498,10 +567,39 @@ window.editItem = function(id) {
     inputCategory.value = item.category || "";
     inputKeywords.value = item.keywords ? item.keywords.join(", ") : "";
     inputDefinition.value = item.definition;
-    inputCharacteristics.value = item.characteristics.join("\n");
     
+    // Reset Data Builders
     builderRowsContainer.innerHTML = "";
     customSectionsContainer.innerHTML = ""; 
+    ciriSectionsContainer.innerHTML = "";
+
+    // KEMASKINI BORANG EDIT: Memuatkan Semula Data Ciri-Ciri Utama
+    if (item.characteristics && item.characteristics.length > 0) {
+        let hasLegacy = false;
+        let legacyText = [];
+        
+        item.characteristics.forEach(c => {
+            try {
+                if (c.startsWith('{') && c.endsWith('}')) {
+                    const parsed = JSON.parse(c);
+                    createCiriSectionInput(parsed.mainTitle || "", parsed.subTitle || "", parsed.content || "");
+                } else {
+                    legacyText.push(c);
+                    hasLegacy = true;
+                }
+            } catch(e) {
+                legacyText.push(c);
+                hasLegacy = true;
+            }
+        });
+        
+        // Membina satu kotak jika terdapat data lama untuk disunting
+        if (hasLegacy && legacyText.length > 0) {
+            createCiriSectionInput("", "", legacyText.join("\n"));
+        }
+    } else {
+        createCiriSectionInput();
+    }
 
     if (item.table_data) {
         th1.value = item.table_data.headers ? (item.table_data.headers[0] || "") : "";
@@ -535,11 +633,13 @@ btnBukaBorang.addEventListener("click", () => {
     inputId.value = "";
     builderRowsContainer.innerHTML = "";
     customSectionsContainer.innerHTML = "";
+    ciriSectionsContainer.innerHTML = "";
     inputCustomMainTitle.value = ""; 
     
     formTitle.textContent = "Tambah Istilah Baru";
     formSection.classList.add("active");
     
+    createCiriSectionInput();
     createCustomSectionInput(); 
     createTableRowInput();
     createTableRowInput();
@@ -552,6 +652,7 @@ function closeForm() {
     inputId.value = ""; 
     builderRowsContainer.innerHTML = "";
     customSectionsContainer.innerHTML = "";
+    ciriSectionsContainer.innerHTML = "";
     inputCustomMainTitle.value = ""; 
 }
 
