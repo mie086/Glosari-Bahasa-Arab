@@ -16,7 +16,6 @@ const resultsList = document.getElementById("resultsList");
 
 const adminAuthBox = document.getElementById("adminAuthBox");
 const adminDashboardBox = document.getElementById("adminDashboardBox");
-const adminSearchInput = document.getElementById("adminSearchInput");
 const loginForm = document.getElementById("loginForm");
 const btnLogKeluar = document.getElementById("btnLogKeluar");
 
@@ -27,13 +26,9 @@ const btnBukaBorang = document.getElementById("btnBukaBorang");
 const btnBatal = document.getElementById("btnBatal");
 const formTitle = document.getElementById("formTitle");
 
-// Pautan Elemen Dinamik UI Baru & Lama
 const ciriSectionsContainer = document.getElementById("ciriSectionsContainer");
 const btnTambahCiri = document.getElementById("btnTambahCiri");
-const builderRowsContainer = document.getElementById("builderRowsContainer");
-const btnTambahBarisJadual = document.getElementById("btnTambahBarisJadual");
-const customSectionsContainer = document.getElementById("customSectionsContainer");
-const btnTambahSeksyenKhas = document.getElementById("btnTambahSeksyenKhas");
+const adminSearchInput = document.getElementById("adminSearchInput");
 
 const inputId = document.getElementById("termId");
 const inputTitleMs = document.getElementById("titleMs");
@@ -41,22 +36,28 @@ const inputTitleAr = document.getElementById("titleAr");
 const inputCategory = document.getElementById("category");
 const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
-const th1 = document.getElementById("th1");
-const th2 = document.getElementById("th2");
-const th3 = document.getElementById("th3");
-const inputCustomMainTitle = document.getElementById("customMainTitle");
-const tableTitleInput = document.getElementById("tableTitleInput");
 
 // =========================================================================
-// SUNTIKAN BARU: PENJANA KOTAK DINAMIK CIRI-CIRI UTAMA
+// PEMBANGUN CIRI-CIRI UTAMA DINAMIK DENGAN JADUAL DALAMAN
 // =========================================================================
-function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "") {
+function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "", tableDataVal = null) {
     const uniqueId = "ciriContent_" + Date.now() + Math.floor(Math.random() * 1000);
+    const tableContainerId = "ciriTableBox_" + Date.now() + Math.floor(Math.random() * 1000);
+    const rowsContainerId = "ciriTableRows_" + Date.now() + Math.floor(Math.random() * 1000);
 
     const sectionDiv = document.createElement("div");
     sectionDiv.className = "ciri-section-item";
     sectionDiv.style = "background: #fff; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-bottom: 12px; position: relative;";
     
+    let isTableVisible = tableDataVal ? "block" : "none";
+    let btnToggleText = tableDataVal ? "✓ Buang Jadual" : "+ Tambah Jadual Contoh";
+    let btnToggleClass = tableDataVal ? "btn-danger" : "btn-primary";
+
+    let tTitle = tableDataVal && tableDataVal.table_title ? tableDataVal.table_title : "";
+    let th1_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[0] || "") : "";
+    let th2_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[1] || "") : "";
+    let th3_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[2] || "") : "";
+
     sectionDiv.innerHTML = `
         <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
         
@@ -70,7 +71,7 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
             <input type="text" class="form-control ciri-sub-title-input" placeholder="Contoh: Rafa' / Nasab / Jar" value="${subTitleVal}">
         </div>
         
-        <div class="form-group" style="margin-bottom:0;">
+        <div class="form-group" style="margin-bottom:12px;">
             <label>Penerangan</label>
             <div class="text-toolbar">
                 <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
@@ -81,49 +82,79 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
             </div>
             <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${contentVal}</textarea>
         </div>
+
+        <button type="button" class="btn ${btnToggleClass} btn-toggle-table" style="padding: 4px 10px; font-size: 0.8rem; margin-bottom: 4px;">${btnToggleText}</button>
+
+        <div class="ciri-table-builder" id="${tableContainerId}" style="display: ${isTableVisible}; background: #f7fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 8px;">
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 0.85rem; color: var(--accent-color); font-weight: 600;">Tajuk Jadual (Pilihan)</label>
+                <input type="text" class="form-control ciri-table-title" placeholder="Contoh: Contoh Tasrif / Struktur" value="${tTitle}">
+            </div>
+            
+            <div class="text-toolbar" style="margin-bottom: 8px; width: 100%;">
+                <button type="button" class="toolbar-btn" onclick="applyTableFormat('b')" title="Tebal">B</button>
+                <button type="button" class="toolbar-btn" onclick="applyTableFormat('u')" title="Garis Bawah"><u>U</u></button>
+                <button type="button" class="toolbar-btn" onclick="applyTableFormat('i')" title="Senget"><i>I</i></button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                <input type="text" class="form-control th-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 1" value="${th1_val}">
+                <input type="text" class="form-control th-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 2" value="${th2_val}">
+                <input type="text" class="form-control th-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 3" value="${th3_val}">
+            </div>
+
+            <div class="ciri-rows-area" id="${rowsContainerId}" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
+            <button type="button" class="btn btn-primary btn-add-row-ciri" style="padding: 4px 8px; font-size: 0.75rem;">+ Tambah Baris Data</button>
+        </div>
     `;
+
+    const tableBox = sectionDiv.querySelector(`#${tableContainerId}`);
+    const btnToggleTable = sectionDiv.querySelector(".btn-toggle-table");
+    const rowsArea = sectionDiv.querySelector(`#${rowsContainerId}`);
+    const btnAddRowCiri = sectionDiv.querySelector(".btn-add-row-ciri");
+
+    function addCiriTableRow(v1 = "", v2 = "", v3 = "") {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "builder-row-item";
+        rowDiv.style = "display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 6px; align-items: center;";
+        rowDiv.innerHTML = `
+            <input type="text" class="form-control col-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 1" value="${v1}">
+            <input type="text" class="form-control col-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 2" value="${v2}">
+            <input type="text" class="form-control col-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 3" value="${v3}">
+            <button type="button" class="btn btn-danger btn-remove-row" style="padding: 4px 8px; font-size:0.75rem;">X</button>
+        `;
+        rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
+        rowsArea.appendChild(rowDiv);
+    }
+
+    if (tableDataVal && tableDataVal.rows) {
+        tableDataVal.rows.forEach(r => addCiriTableRow(r[0], r[1], r[2]));
+    }
+
+    btnAddRowCiri.addEventListener("click", () => addCiriTableRow());
+
+    btnToggleTable.addEventListener("click", () => {
+        if (tableBox.style.display === "none") {
+            tableBox.style.display = "block";
+            btnToggleTable.textContent = "✓ Buang Jadual";
+            btnToggleTable.classList.remove("btn-primary");
+            btnToggleTable.classList.add("btn-danger");
+            if (rowsArea.children.length === 0) {
+                addCiriTableRow();
+                addCiriTableRow();
+            }
+        } else {
+            tableBox.style.display = "none";
+            btnToggleTable.textContent = "+ Tambah Jadual Contoh";
+            btnToggleTable.classList.remove("btn-danger");
+            btnToggleTable.classList.add("btn-primary");
+        }
+    });
 
     sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
     ciriSectionsContainer.appendChild(sectionDiv);
 }
 btnTambahCiri.addEventListener("click", () => createCiriSectionInput());
-
-// =========================================================================
-// PENJANA KOTAK DINAMIK SEKSYEN TAMBAHAN (KEKAL SAMA)
-// =========================================================================
-function createCustomSectionInput(titleVal = "", contentVal = "") {
-    const uniqueId = "customContent_" + Date.now() + Math.floor(Math.random() * 1000);
-
-    const sectionDiv = document.createElement("div");
-    sectionDiv.className = "custom-section-item";
-    sectionDiv.style = "background: #fff; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; position: relative;";
-    
-    sectionDiv.innerHTML = `
-        <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
-        
-        <div class="form-group" style="margin-top: 4px; margin-right: 40px;">
-            <label>Subtajuk Khas (Pilihan)</label>
-            <input type="text" class="form-control custom-title-input" placeholder="Contoh: Kaedah Penggunaan / Nota Penting" value="${titleVal}">
-        </div>
-        
-        <div class="form-group" style="margin-bottom:0;">
-            <label>Penerangan Khas</label>
-            <div class="text-toolbar">
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'u')"><u>U</u></button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'i')"><i>I</i></button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'bullet')">• Senarai</button>
-                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('${uniqueId}', 'color', this.value)"></div>
-            </div>
-            <textarea id="${uniqueId}" class="form-control custom-content-input" rows="3" placeholder="Masukkan penerangan lengkap seksyen khas ini...">${contentVal}</textarea>
-        </div>
-    `;
-
-    sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
-    customSectionsContainer.appendChild(sectionDiv);
-}
-btnTambahSeksyenKhas.addEventListener("click", () => createCustomSectionInput());
-
 
 document.addEventListener('focusin', function(e) {
     if (e.target && e.target.classList.contains('table-input-target')) {
@@ -270,42 +301,48 @@ termForm.addEventListener("submit", async (e) => {
     const id = inputId.value || "term-" + Date.now();
     const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
 
-    // KEMASKINI PENYIMPANAN: Menangkap data Ciri-Ciri Utama Dinamik dan menyimpannya sebagai JSON String
     const ciriElements = ciriSectionsContainer.querySelectorAll(".ciri-section-item");
     const chrArray = [];
     ciriElements.forEach(item => {
         const mTitle = item.querySelector(".ciri-main-title-input").value.trim();
         const sTitle = item.querySelector(".ciri-sub-title-input").value.trim();
         const content = item.querySelector(".ciri-content-input").value.trim();
-        if (mTitle || sTitle || content) {
-            chrArray.push(JSON.stringify({ mainTitle: mTitle, subTitle: sTitle, content: content }));
+        
+        const tableBox = item.querySelector(".ciri-table-builder");
+        let embeddedTableObj = null;
+        if (tableBox && tableBox.style.display !== "none") {
+            const tTitle = tableBox.querySelector(".ciri-table-title").value.trim();
+            const h1 = tableBox.querySelector(".th-1").value.trim();
+            const h2 = tableBox.querySelector(".th-2").value.trim();
+            const h3 = tableBox.querySelector(".th-3").value.trim();
+            
+            const rItems = tableBox.querySelectorAll(".builder-row-item");
+            const rowsData = [];
+            rItems.forEach(row => {
+                const v1 = row.querySelector(".col-1").value;
+                const v2 = row.querySelector(".col-2").value;
+                const v3 = row.querySelector(".col-3").value;
+                if (v1 || v2 || v3) rowsData.push([v1, v2, v3]);
+            });
+            
+            if (h1 || h2 || h3 || rowsData.length > 0) {
+                embeddedTableObj = {
+                    table_title: tTitle,
+                    headers: [h1, h2, h3],
+                    rows: rowsData
+                };
+            }
+        }
+
+        if (mTitle || sTitle || content || embeddedTableObj) {
+            chrArray.push(JSON.stringify({ 
+                mainTitle: mTitle, 
+                subTitle: sTitle, 
+                content: content,
+                table_data: embeddedTableObj
+            }));
         }
     });
-
-    const rowItems = builderRowsContainer.querySelectorAll(".builder-row-item");
-    const rowsData = [];
-    rowItems.forEach(row => {
-        const v1 = row.querySelector(".col-1").value;
-        const v2 = row.querySelector(".col-2").value;
-        const v3 = row.querySelector(".col-3").value;
-        if (v1 || v2 || v3) rowsData.push([v1, v2, v3]);
-    });
-
-    const customSectionElements = customSectionsContainer.querySelectorAll(".custom-section-item");
-    const customSectionsData = [];
-    customSectionElements.forEach(item => {
-        const titleVal = item.querySelector(".custom-title-input").value.trim();
-        const contentVal = item.querySelector(".custom-content-input").value.trim();
-        if (titleVal || contentVal) customSectionsData.push({ title: titleVal, content: contentVal });
-    });
-
-    const tableDataObject = {
-        table_title: tableTitleInput.value.trim(),
-        headers: [th1.value, th2.value, th3.value],
-        rows: rowsData,
-        main_custom_title: inputCustomMainTitle.value.trim(),
-        custom_sections: customSectionsData
-    };
 
     const termObject = {
         id: id,
@@ -314,7 +351,7 @@ termForm.addEventListener("submit", async (e) => {
         category: inputCategory.value,
         definition: inputDefinition.value,
         characteristics: chrArray,
-        table_data: tableDataObject,
+        table_data: null, // Dikosongkan kerana Seksyen Tambahan telah dibuang
         keywords: kwArray
     };
 
@@ -350,21 +387,6 @@ window.deleteItem = async function(id) {
         }
     }
 };
-
-function createTableRowInput(val1 = "", val2 = "", val3 = "") {
-    const rowDiv = document.createElement("div");
-    rowDiv.className = "builder-row-item";
-    rowDiv.innerHTML = `
-        <input type="text" class="form-control col-1 table-input-target" style="padding:8px;" placeholder="Lajur 1" value="${val1}">
-        <input type="text" class="form-control col-2 table-input-target" style="padding:8px;" placeholder="Lajur 2" value="${val2}">
-        <input type="text" class="form-control col-3 table-input-target" style="padding:8px;" placeholder="Lajur 3" value="${val3}">
-        <button type="button" class="btn btn-danger btn-remove-row" style="padding: 8px 12px;">X</button>
-    `;
-    rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
-    builderRowsContainer.appendChild(rowDiv);
-}
-
-btnTambahBarisJadual.addEventListener("click", () => createTableRowInput());
 
 navButtons.forEach(button => {
     button.addEventListener("click", () => {
@@ -432,7 +454,6 @@ function renderSearchCard() {
     const card = document.createElement("div");
     card.className = "card";
     
-    // KEMASKINI PAPARAN: Menyokong format JSON baharu dan teks Legacy lama untuk Ciri-Ciri Utama
     let formattedCharacteristics = "";
     if (selectedSearchItem.characteristics && selectedSearchItem.characteristics.length > 0) {
         selectedSearchItem.characteristics.forEach(c => {
@@ -448,8 +469,36 @@ function renderSearchCard() {
                     if (parsed.content) {
                         formattedCharacteristics += `<div class="definition" style="margin-bottom: 16px; line-height: 1.6;">${parsed.content.replace(/\n/g, "<br>")}</div>`;
                     }
+                    
+                    if (parsed.table_data && parsed.table_data.headers && parsed.table_data.rows && parsed.table_data.rows.length > 0) {
+                        const tTitle = parsed.table_data.table_title || "Contoh Struktur / Tasrif:";
+                        formattedCharacteristics += `
+                            <div style="margin-top: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 12px;">
+                                <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">${tTitle}</span>
+                            </div>
+                            <div class="table-container" style="margin-bottom: 24px;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>${parsed.table_data.headers[0] || ""}</th>
+                                            <th style="text-align: center;">${parsed.table_data.headers[1] || ""}</th>
+                                            <th style="text-align: center;">${parsed.table_data.headers[2] || ""}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${parsed.table_data.rows.map(row => `
+                                            <tr>
+                                                <td>${row[0] || ""}</td>
+                                                <td style="text-align: center;">${row[1] || ""}</td>
+                                                <td style="text-align: center;">${row[2] || ""}</td>
+                                            </tr>
+                                        `).join("")}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }
                 } else {
-                    // Teks Legacy lama
                     formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${c.replace(/\n/g, "<br>")}</div>`;
                 }
             } catch (e) {
@@ -458,45 +507,10 @@ function renderSearchCard() {
         });
     }
 
-    let generatedCustomSectionHtml = "";
-    if (selectedSearchItem.table_data) {
-        if (selectedSearchItem.table_data.main_custom_title) {
-            generatedCustomSectionHtml += `
-                <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
-                    <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${selectedSearchItem.table_data.main_custom_title}</span>
-                </div>
-            `;
-        }
-
-        if (selectedSearchItem.table_data.custom_title || selectedSearchItem.table_data.custom_content) {
-            let formattedContent = selectedSearchItem.table_data.custom_content ? selectedSearchItem.table_data.custom_content.replace(/\n/g, "<br>") : "";
-            let oldTitle = selectedSearchItem.table_data.custom_title || 'Penerangan Tambahan';
-            generatedCustomSectionHtml += `
-                <div style="margin-top: 18px; margin-bottom: 8px; font-size: 1.15rem; font-weight: bold; color: var(--primary-color);">${oldTitle}:</div>
-                <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
-            `;
-        }
-
-        if (selectedSearchItem.table_data.custom_sections && selectedSearchItem.table_data.custom_sections.length > 0) {
-            selectedSearchItem.table_data.custom_sections.forEach(sec => {
-                let formattedContent = sec.content ? sec.content.replace(/\n/g, "<br>") : "";
-                let titleHtml = sec.title ? `<div style="margin-top: 18px; margin-bottom: 8px; font-size: 1.15rem; font-weight: bold; color: var(--primary-color);">${sec.title}:</div>` : '';
-                generatedCustomSectionHtml += `
-                    ${titleHtml}
-                    <div class="definition" style="margin-bottom: 18px; line-height: 1.6;">${formattedContent}</div>
-                `;
-            });
-        }
-    }
-
-    let generatedTableHtml = "";
-    const tData = selectedSearchItem.table_data;
-    if (tData && tData.headers && tData.headers.some(h => h !== "") && tData.rows && tData.rows.length > 0) {
-        
-        // KEMASKINI: Baca tajuk dari pangkalan data, atau guna nama lalai jika kosong
-        const tableTitle = tData.table_title || "Contoh Struktur / Tasrif:";
-
-        generatedTableHtml = `
+    let legacyStandaloneTableHtml = "";
+    if (selectedSearchItem.table_data && selectedSearchItem.table_data.headers && selectedSearchItem.table_data.rows && selectedSearchItem.table_data.rows.length > 0) {
+        const tableTitle = selectedSearchItem.table_data.table_title || "Contoh Struktur / Tasrif:";
+        legacyStandaloneTableHtml = `
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
                 <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${tableTitle}</span>
             </div>
@@ -504,17 +518,17 @@ function renderSearchCard() {
                 <table>
                     <thead>
                         <tr>
-                            <th>${tData.headers[0] || ""}</th>
-                            <th style="text-align: center;">${tData.headers[1] || ""}</th>
-                            <th style="text-align: center;">${tData.headers[2] || ""}</th>
+                            <th>${selectedSearchItem.table_data.headers[0] || ""}</th>
+                            <th style="text-align: center;">${selectedSearchItem.table_data.headers[1] || ""}</th>
+                            <th style="text-align: center;">${selectedSearchItem.table_data.headers[2] || ""}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${tData.rows.map(row => `
+                        ${selectedSearchItem.table_data.rows.map(row => `
                             <tr>
                                 <td>${row[0] || ""}</td>
-                                <td>${row[1] || ""}</td>
-                                <td>${row[2] || ""}</td>
+                                <td style="text-align: center;">${row[1] || ""}</td>
+                                <td style="text-align: center;">${row[2] || ""}</td>
                             </tr>
                         `).join("")}
                     </tbody>
@@ -539,8 +553,7 @@ function renderSearchCard() {
             
             <div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>
             
-            ${generatedCustomSectionHtml}
-            ${generatedTableHtml}
+            ${legacyStandaloneTableHtml}
         </div>`;
     resultsList.appendChild(card);
 }
@@ -595,12 +608,8 @@ window.editItem = function(id) {
     inputKeywords.value = item.keywords ? item.keywords.join(", ") : "";
     inputDefinition.value = item.definition;
     
-    // Reset Data Builders
-    builderRowsContainer.innerHTML = "";
-    customSectionsContainer.innerHTML = ""; 
     ciriSectionsContainer.innerHTML = "";
 
-    // KEMASKINI BORANG EDIT: Memuatkan Semula Data Ciri-Ciri Utama
     if (item.characteristics && item.characteristics.length > 0) {
         let hasLegacy = false;
         let legacyText = [];
@@ -609,7 +618,7 @@ window.editItem = function(id) {
             try {
                 if (c.startsWith('{') && c.endsWith('}')) {
                     const parsed = JSON.parse(c);
-                    createCiriSectionInput(parsed.mainTitle || "", parsed.subTitle || "", parsed.content || "");
+                    createCiriSectionInput(parsed.mainTitle || "", parsed.subTitle || "", parsed.content || "", parsed.table_data || null);
                 } else {
                     legacyText.push(c);
                     hasLegacy = true;
@@ -620,37 +629,11 @@ window.editItem = function(id) {
             }
         });
         
-        // Membina satu kotak jika terdapat data lama untuk disunting
         if (hasLegacy && legacyText.length > 0) {
-            createCiriSectionInput("", "", legacyText.join("\n"));
+            createCiriSectionInput("", "", legacyText.join("\n"), null);
         }
     } else {
         createCiriSectionInput();
-    }
-
-    if (item.table_data) {
-        tableTitleInput.value = item.table_data.table_title || "";
-        th1.value = item.table_data.headers ? (item.table_data.headers[0] || "") : "";
-        th2.value = item.table_data.headers ? (item.table_data.headers[1] || "") : "";
-        th3.value = item.table_data.headers ? (item.table_data.headers[2] || "") : "";
-        
-        inputCustomMainTitle.value = item.table_data.main_custom_title || "";
-
-        if (item.table_data.custom_title || item.table_data.custom_content) {
-            createCustomSectionInput(item.table_data.custom_title || "", item.table_data.custom_content || "");
-        }
-        
-        if (item.table_data.custom_sections && item.table_data.custom_sections.length > 0) {
-            item.table_data.custom_sections.forEach(sec => createCustomSectionInput(sec.title, sec.content));
-        }
-
-        if (item.table_data.rows) {
-            item.table_data.rows.forEach(row => createTableRowInput(row[0], row[1], row[2]));
-        }
-    } else {
-        tableTitleInput.value = "";
-        th1.value = ""; th2.value = ""; th3.value = "";
-        inputCustomMainTitle.value = ""; 
     }
 
     formSection.classList.add("active");
@@ -660,19 +643,12 @@ window.editItem = function(id) {
 btnBukaBorang.addEventListener("click", () => {
     termForm.reset();
     inputId.value = "";
-    builderRowsContainer.innerHTML = "";
-    customSectionsContainer.innerHTML = "";
     ciriSectionsContainer.innerHTML = "";
-    inputCustomMainTitle.value = ""; 
-    tableTitleInput.value = "";
     
     formTitle.textContent = "Tambah Istilah Baru";
     formSection.classList.add("active");
     
     createCiriSectionInput();
-    createCustomSectionInput(); 
-    createTableRowInput();
-    createTableRowInput();
 });
 
 btnBatal.addEventListener("click", closeForm);
@@ -680,10 +656,7 @@ function closeForm() {
     formSection.classList.remove("active"); 
     termForm.reset(); 
     inputId.value = ""; 
-    builderRowsContainer.innerHTML = "";
-    customSectionsContainer.innerHTML = "";
     ciriSectionsContainer.innerHTML = "";
-    inputCustomMainTitle.value = ""; 
 }
 
 searchInput.addEventListener("input", handleSearchInput);
