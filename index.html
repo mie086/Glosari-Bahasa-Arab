@@ -73,37 +73,24 @@
         .toolbar-color { border: none; width: 40px; height: 40px; padding: 0; cursor: pointer; background: none; position: absolute; transform: scale(1.4); }
 
         .table-builder-box { background: #fdfdfd; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-top: 12px; }
-        .builder-label { color: var(--accent-color) !important; margin-bottom: 10px; }
-        .builder-header-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-        .builder-rows-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-        .builder-row-item { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; }
-
+        .table-container { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; background: var(--card-bg); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+        th, td { padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { background-color: #f7fafc; color: var(--primary-color); font-weight: 600; }
+        .td-arabic { font-family: var(--font-arabic); font-size: 1.3rem; direction: rtl; text-align: right; }
+        
         .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px; }
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px; }
         .card-title-group .title-ms { font-size: 1.3rem; font-weight: 700; color: var(--primary-color); }
         .card-title-group .category-badge, .badge { display: inline-block; font-size: 0.75rem; padding: 2px 8px; background-color: #edf2f7; color: #4a5568; border-radius: 4px; font-weight: 600; }
         .title-ar { font-family: var(--font-arabic); font-size: 1.8rem; color: var(--accent-color); direction: rtl; }
         .card-body .definition { font-size: 1rem; margin-bottom: 16px; color: #2d3748; }
-        .section-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: var(--primary-color); }
         
-        .definition ul, .definition ol, .characteristics-list {
-            list-style-position: outside !important;
-            padding-left: 1.5rem !important;
-            padding-inline-start: 1.5rem !important; 
-            margin-left: 0 !important;
-            margin-top: 8px !important;
-            margin-bottom: 8px !important;
-        }
-        .definition li, .characteristics-list li { margin-bottom: 6px !important; font-size: 0.95rem !important; line-height: 1.6 !important; padding-left: 4px !important; }
-        .definition ul ul, .definition ol ol, .definition ul ol, .definition ol ul { padding-left: 1.5rem !important; padding-inline-start: 1.5rem !important; margin-top: 4px !important; margin-bottom: 4px !important; }
-
-        .table-container { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; background: var(--card-bg); }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-        th, td { padding: 12px; border-bottom: 1px solid var(--border-color); }
-        th { background-color: #f7fafc; color: var(--primary-color); font-weight: 600; }
-        .td-arabic { font-family: var(--font-arabic); font-size: 1.3rem; direction: rtl; text-align: right; }
-        .highlight-ar { font-weight: bold; color: #e53e3e; }
         .welcome-message, .no-results { text-align: center; padding: 40px 20px; color: var(--text-muted); background: #edf2f7; border-radius: var(--radius); border: 1px solid var(--border-color); }
+
+        .inline-bullet-list { display: inline; padding-left: 0 !important; margin: 0 !important; }
+        .inline-bullet-list li { display: inline; margin-right: 15px; }
+        .inline-bullet-list li::before { content: "• "; }
 
         @media (min-width: 600px) { body { padding: 24px; } header h1 { font-size: 2.2rem; } .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
     </style>
@@ -195,53 +182,10 @@
                             <textarea id="definition" class="form-control" rows="3" placeholder="Masukkan maksud istilah..." required></textarea>
                         </div>
 
+                        <!-- PEMBANGUN CIRI-CIRI UTAMA DINAMIK DENGAN INTEGRASI JADUAL -->
                         <div class="form-group table-builder-box">
-                            
-                            <!-- Bekas untuk menjana kotak ciri-ciri dinamik -->
                             <div id="ciriSectionsContainer"></div>
-                            
                             <button type="button" class="btn btn-primary" id="btnTambahCiri" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 8px;">+ Tambah Ciri-Ciri Utama</button>
-                        </div>
-
-                        <div class="form-group table-builder-box">
-                            <label class="builder-label" style="font-weight: 700; color: var(--primary-color) !important;">Seksyen Tambahan (Subtajuk & Penerangan Khas)</label>
-                            
-                            <!-- KEMASKINI BARU: TAJUK BESAR SEKSYEN (STATIK) -->
-                            <div class="form-group" style="margin-top: 8px; border-bottom: 2px dashed var(--border-color); padding-bottom: 16px; margin-bottom: 16px;">
-                                <label for="customMainTitle" style="color: var(--accent-color);">Tajuk Besar Seksyen (Pilihan)</label>
-                                <input type="text" id="customMainTitle" class="form-control" placeholder="Contoh: Golongan Kata yang Mabni">
-                            </div>
-
-                            <div id="customSectionsContainer"></div>
-                            
-                            <button type="button" class="btn btn-primary" id="btnTambahSeksyenKhas" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 8px;">+ Tambah Penerangan Khas</button>
-                        </div>
-
-                        <div class="form-group table-builder-box">
-                            <label class="builder-label">Pembangun Jadual Contoh (Pilihan)</label>
-                            
-                            <div class="form-group" style="margin-top: 8px; margin-bottom: 16px;">
-                                <label for="tableTitleInput" style="color: var(--accent-color);">Tajuk Jadual (Pilihan)</label>
-                                <input type="text" id="tableTitleInput" class="form-control" placeholder="Contoh: Contoh Struktur / Tasrif">
-                            </div>
-                            
-                            <div class="text-toolbar" style="margin-bottom: 12px; width: 100%;">
-                                <button type="button" class="toolbar-btn" onclick="applyTableFormat('b')" title="Tebal (Bold)">B</button>
-                                <button type="button" class="toolbar-btn" onclick="applyTableFormat('u')" title="Garis Bawah (Underline)"><u>U</u></button>
-                                <button type="button" class="toolbar-btn" onclick="applyTableFormat('i')" title="Senget (Italic)"><i>I</i></button>
-                                <div class="color-picker-wrapper" title="Warna Font">
-                                    <input type="color" class="toolbar-color" onchange="applyTableFormat('color', this.value)">
-                                </div>
-                                <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 8px;">(Sila klik di dalam petak jadual terlebih dahulu sebelum tekan butang format)</span>
-                            </div>
-
-                            <div class="builder-header-grid">
-                                <input type="text" id="th1" class="form-control table-input-target" style="padding:8px;" placeholder="Header 1">
-                                <input type="text" id="th2" class="form-control table-input-target" style="padding:8px;" placeholder="Header 2">
-                                <input type="text" id="th3" class="form-control table-input-target" style="padding:8px;" placeholder="Header 3">
-                            </div>
-                            <div class="builder-rows-container" id="builderRowsContainer"></div>
-                            <button type="button" class="btn btn-primary" id="btnTambahBarisJadual" style="padding: 6px 12px; font-size: 0.8rem;">+ Tambah Baris Data</button>
                         </div>
 
                         <div class="form-actions">
