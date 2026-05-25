@@ -38,7 +38,7 @@ const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
 
 // =========================================================================
-// PEMBANGUN CIRI-CIRI UTAMA DINAMIK DENGAN JADUAL DALAMAN
+// PEMBANGUN CIRI-CIRI UTAMA DINAMIK DENGAN 4 LAJUR
 // =========================================================================
 function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "", tableDataVal = null) {
     const uniqueId = "ciriContent_" + Date.now() + Math.floor(Math.random() * 1000);
@@ -57,6 +57,8 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
     let th1_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[0] || "") : "";
     let th2_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[1] || "") : "";
     let th3_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[2] || "") : "";
+    // KEMASKINI: Menambah Header 4
+    let th4_val = tableDataVal && tableDataVal.headers && tableDataVal.headers[3] ? tableDataVal.headers[3] : "";
 
     sectionDiv.innerHTML = `
         <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
@@ -97,10 +99,11 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
                 <button type="button" class="toolbar-btn" onclick="applyTableFormat('i')" title="Senget"><i>I</i></button>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
                 <input type="text" class="form-control th-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 1" value="${th1_val}">
                 <input type="text" class="form-control th-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 2" value="${th2_val}">
                 <input type="text" class="form-control th-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 3" value="${th3_val}">
+                <input type="text" class="form-control th-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 4" value="${th4_val}">
             </div>
 
             <div class="ciri-rows-area" id="${rowsContainerId}" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
@@ -113,14 +116,17 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
     const rowsArea = sectionDiv.querySelector(`#${rowsContainerId}`);
     const btnAddRowCiri = sectionDiv.querySelector(".btn-add-row-ciri");
 
-    function addCiriTableRow(v1 = "", v2 = "", v3 = "") {
+    // KEMASKINI: Menerima 4 Parameter
+    function addCiriTableRow(v1 = "", v2 = "", v3 = "", v4 = "") {
         const rowDiv = document.createElement("div");
         rowDiv.className = "builder-row-item";
-        rowDiv.style = "display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 6px; align-items: center;";
+        // KEMASKINI: Grid ditukar kepada 4 kotak + 1 butang padam
+        rowDiv.style = "display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 6px; align-items: center;";
         rowDiv.innerHTML = `
             <input type="text" class="form-control col-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 1" value="${v1}">
             <input type="text" class="form-control col-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 2" value="${v2}">
             <input type="text" class="form-control col-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 3" value="${v3}">
+            <input type="text" class="form-control col-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 4" value="${v4}">
             <button type="button" class="btn btn-danger btn-remove-row" style="padding: 4px 8px; font-size:0.75rem;">X</button>
         `;
         rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
@@ -128,7 +134,7 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
     }
 
     if (tableDataVal && tableDataVal.rows) {
-        tableDataVal.rows.forEach(r => addCiriTableRow(r[0], r[1], r[2]));
+        tableDataVal.rows.forEach(r => addCiriTableRow(r[0], r[1], r[2], r[3]));
     }
 
     btnAddRowCiri.addEventListener("click", () => addCiriTableRow());
@@ -207,22 +213,10 @@ window.applyFormat = function(textareaId, type, colorValue = null) {
     let modifiedText = "";
 
     switch (type) {
-        case 'b':
-            tagOpen = "<b>"; tagClose = "</b>";
-            modifiedText = tagOpen + selectedText + tagClose;
-            break;
-        case 'u':
-            tagOpen = "<u>"; tagClose = "</u>";
-            modifiedText = tagOpen + selectedText + tagClose;
-            break;
-        case 'i':
-            tagOpen = "<i>"; tagClose = "</i>";
-            modifiedText = tagOpen + selectedText + tagClose;
-            break;
-        case 'color':
-            tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>";
-            modifiedText = tagOpen + selectedText + tagClose;
-            break;
+        case 'b': tagOpen = "<b>"; tagClose = "</b>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'u': tagOpen = "<u>"; tagClose = "</u>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'i': tagOpen = "<i>"; tagClose = "</i>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; modifiedText = tagOpen + selectedText + tagClose; break;
         case 'bullet':
             if (selectedText.trim().length > 0) {
                 const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line.trim()}</li>` : '').filter(l => l).join(' ');
@@ -303,6 +297,7 @@ termForm.addEventListener("submit", async (e) => {
 
     const ciriElements = ciriSectionsContainer.querySelectorAll(".ciri-section-item");
     const chrArray = [];
+    
     ciriElements.forEach(item => {
         const mTitle = item.querySelector(".ciri-main-title-input").value.trim();
         const sTitle = item.querySelector(".ciri-sub-title-input").value.trim();
@@ -315,20 +310,22 @@ termForm.addEventListener("submit", async (e) => {
             const h1 = tableBox.querySelector(".th-1").value.trim();
             const h2 = tableBox.querySelector(".th-2").value.trim();
             const h3 = tableBox.querySelector(".th-3").value.trim();
+            const h4 = tableBox.querySelector(".th-4").value.trim(); // KEMASKINI: Baca H4
             
             const rItems = tableBox.querySelectorAll(".builder-row-item");
             const rowsData = [];
             rItems.forEach(row => {
-                const v1 = row.querySelector(".col-1").value;
-                const v2 = row.querySelector(".col-2").value;
-                const v3 = row.querySelector(".col-3").value;
-                if (v1 || v2 || v3) rowsData.push([v1, v2, v3]);
+                const v1 = row.querySelector(".col-1").value.trim();
+                const v2 = row.querySelector(".col-2").value.trim();
+                const v3 = row.querySelector(".col-3").value.trim();
+                const v4 = row.querySelector(".col-4").value.trim(); // KEMASKINI: Baca V4
+                if (v1 || v2 || v3 || v4) rowsData.push([v1, v2, v3, v4]);
             });
             
-            if (h1 || h2 || h3 || rowsData.length > 0) {
+            if (h1 || h2 || h3 || h4 || rowsData.length > 0) {
                 embeddedTableObj = {
                     table_title: tTitle,
-                    headers: [h1, h2, h3],
+                    headers: [h1, h2, h3, h4],
                     rows: rowsData
                 };
             }
@@ -351,7 +348,7 @@ termForm.addEventListener("submit", async (e) => {
         category: inputCategory.value,
         definition: inputDefinition.value,
         characteristics: chrArray,
-        table_data: null, // Dikosongkan kerana Seksyen Tambahan telah dibuang
+        table_data: null, 
         keywords: kwArray
     };
 
@@ -472,6 +469,19 @@ function renderSearchCard() {
                     
                     if (parsed.table_data && parsed.table_data.headers && parsed.table_data.rows && parsed.table_data.rows.length > 0) {
                         const tTitle = parsed.table_data.table_title || "Contoh Struktur / Tasrif:";
+                        const tHeaders = parsed.table_data.headers || [];
+                        const tRows = parsed.table_data.rows || [];
+
+                        // KEMASKINI: Logik Paparan Bersyarat Lajur ke-4
+                        let hasColumn4 = false;
+                        if (tHeaders[3] && tHeaders[3].trim() !== "") {
+                            hasColumn4 = true;
+                        } else {
+                            hasColumn4 = tRows.some(row => row[3] && row[3].trim() !== "");
+                        }
+
+                        let th4Html = hasColumn4 ? `<th style="text-align: center;">${tHeaders[3] || ""}</th>` : "";
+
                         formattedCharacteristics += `
                             <div style="margin-top: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 12px;">
                                 <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">${tTitle}</span>
@@ -480,19 +490,24 @@ function renderSearchCard() {
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>${parsed.table_data.headers[0] || ""}</th>
-                                            <th style="text-align: center;">${parsed.table_data.headers[1] || ""}</th>
-                                            <th style="text-align: center;">${parsed.table_data.headers[2] || ""}</th>
+                                            <th>${tHeaders[0] || ""}</th>
+                                            <th style="text-align: center;">${tHeaders[1] || ""}</th>
+                                            <th style="text-align: center;">${tHeaders[2] || ""}</th>
+                                            ${th4Html}
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        ${parsed.table_data.rows.map(row => `
-                                            <tr>
-                                                <td>${row[0] || ""}</td>
-                                                <td style="text-align: center;">${row[1] || ""}</td>
-                                                <td style="text-align: center;">${row[2] || ""}</td>
-                                            </tr>
-                                        `).join("")}
+                                        ${tRows.map(row => {
+                                            let td4Html = hasColumn4 ? `<td style="text-align: center;">${row[3] || ""}</td>` : "";
+                                            return `
+                                                <tr>
+                                                    <td>${row[0] || ""}</td>
+                                                    <td style="text-align: center;">${row[1] || ""}</td>
+                                                    <td style="text-align: center;">${row[2] || ""}</td>
+                                                    ${td4Html}
+                                                </tr>
+                                            `;
+                                        }).join("")}
                                     </tbody>
                                 </table>
                             </div>
@@ -507,9 +522,22 @@ function renderSearchCard() {
         });
     }
 
+    // Sokongan Jadual Lama yang Berdiri Sendiri (Sekiranya Ada Rekod Terdahulu)
     let legacyStandaloneTableHtml = "";
     if (selectedSearchItem.table_data && selectedSearchItem.table_data.headers && selectedSearchItem.table_data.rows && selectedSearchItem.table_data.rows.length > 0) {
         const tableTitle = selectedSearchItem.table_data.table_title || "Contoh Struktur / Tasrif:";
+        const tHeadersLegacy = selectedSearchItem.table_data.headers || [];
+        const tRowsLegacy = selectedSearchItem.table_data.rows || [];
+
+        let hasColumn4Legacy = false;
+        if (tHeadersLegacy[3] && tHeadersLegacy[3].trim() !== "") {
+            hasColumn4Legacy = true;
+        } else {
+            hasColumn4Legacy = tRowsLegacy.some(row => row[3] && row[3].trim() !== "");
+        }
+
+        let th4LegacyHtml = hasColumn4Legacy ? `<th style="text-align: center;">${tHeadersLegacy[3] || ""}</th>` : "";
+
         legacyStandaloneTableHtml = `
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
                 <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${tableTitle}</span>
@@ -518,19 +546,24 @@ function renderSearchCard() {
                 <table>
                     <thead>
                         <tr>
-                            <th>${selectedSearchItem.table_data.headers[0] || ""}</th>
-                            <th style="text-align: center;">${selectedSearchItem.table_data.headers[1] || ""}</th>
-                            <th style="text-align: center;">${selectedSearchItem.table_data.headers[2] || ""}</th>
+                            <th>${tHeadersLegacy[0] || ""}</th>
+                            <th style="text-align: center;">${tHeadersLegacy[1] || ""}</th>
+                            <th style="text-align: center;">${tHeadersLegacy[2] || ""}</th>
+                            ${th4LegacyHtml}
                         </tr>
                     </thead>
                     <tbody>
-                        ${selectedSearchItem.table_data.rows.map(row => `
-                            <tr>
-                                <td>${row[0] || ""}</td>
-                                <td style="text-align: center;">${row[1] || ""}</td>
-                                <td style="text-align: center;">${row[2] || ""}</td>
-                            </tr>
-                        `).join("")}
+                        ${tRowsLegacy.map(row => {
+                            let td4LegacyHtml = hasColumn4Legacy ? `<td style="text-align: center;">${row[3] || ""}</td>` : "";
+                            return `
+                                <tr>
+                                    <td>${row[0] || ""}</td>
+                                    <td style="text-align: center;">${row[1] || ""}</td>
+                                    <td style="text-align: center;">${row[2] || ""}</td>
+                                    ${td4LegacyHtml}
+                                </tr>
+                            `;
+                        }).join("")}
                     </tbody>
                 </table>
             </div>`;
@@ -550,9 +583,7 @@ function renderSearchCard() {
         </div>
         <div class="card-body">
             <div class="definition">${formattedDefinition}</div>
-            
             <div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>
-            
             ${legacyStandaloneTableHtml}
         </div>`;
     resultsList.appendChild(card);
