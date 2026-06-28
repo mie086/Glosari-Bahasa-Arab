@@ -38,6 +38,98 @@ const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
 
 // =========================================================================
+// TAMBAHAN BARU: FUNGSI UTAMA BINA DIREKTORI COLLAPSE IKUT HURUF (AWAM)
+// =========================================================================
+function renderAlphabeticalDirectory() {
+    const directoryContainer = document.getElementById("alphabeticalDirectory");
+    if (!directoryContainer) return;
+
+    directoryContainer.innerHTML = `
+        <div class="directory-container">
+            <div class="directory-title">📁 Senarai Indeks Istilah (Ikut Abjad)</div>
+            <div id="directoryGroups"></div>
+        </div>
+    `;
+
+    const groupsDiv = document.getElementById("directoryGroups");
+    const groups = {};
+
+    // Pecahkan data istilah mengikut huruf pertama title_ms
+    dataIstilah.forEach(item => {
+        if (!item.title_ms) return;
+        const firstLetter = item.title_ms.trim().charAt(0).toUpperCase();
+        if (!groups[firstLetter]) {
+            groups[firstLetter] = [];
+        }
+        groups[firstLetter].push(item);
+    });
+
+    // Susun abjad A-Z
+    const sortedLetters = Object.keys(groups).sort();
+
+    if (sortedLetters.length === 0) {
+        groupsDiv.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 12px;">Tiada istilah untuk dipaparkan.</div>`;
+        return;
+    }
+
+    sortedLetters.forEach(letter => {
+        const letterGroup = document.createElement("div");
+        letterGroup.className = "dir-letter-group";
+        const itemsCount = groups[letter].length;
+
+        letterGroup.innerHTML = `
+            <div class="dir-letter-header">
+                <span>Huruf ${letter} (${itemsCount} Istilah)</span>
+                <span class="dir-toggle-icon">▼</span>
+            </div>
+            <div class="dir-letter-content">
+                ${groups[letter].map(item => `
+                    <div class="dir-item" data-id="${item.id}">
+                        <span>${item.title_ms}</span>
+                        <span class="dir-item-ar">${item.title_ar || ""}</span>
+                    </div>
+                `).join("")}
+            </div>
+        `;
+
+        const header = letterGroup.querySelector(".dir-letter-header");
+        const content = letterGroup.querySelector(".dir-letter-content");
+        const icon = letterGroup.querySelector(".dir-toggle-icon");
+
+        // Logik Buka/Tutup (Collapse)
+        header.addEventListener("click", () => {
+            const isOpen = content.classList.contains("open");
+            if (isOpen) {
+                content.classList.remove("open");
+                icon.textContent = "▼";
+            } else {
+                content.classList.add("open");
+                icon.textContent = "▲";
+            }
+        });
+
+        // Logik apabila istilah ditekan -> Bawa ke maklumat penuh istilah
+        const items = letterGroup.querySelectorAll(".dir-item");
+        items.forEach(itemEl => {
+            itemEl.addEventListener("click", () => {
+                const itemId = itemEl.getAttribute("data-id");
+                const foundItem = dataIstilah.find(i => i.id === itemId);
+                if (foundItem) {
+                    selectedSearchItem = foundItem;
+                    searchInput.value = foundItem.title_ms;
+                    renderSearchCard();
+                    
+                    // Skrol lancar terus ke kad keputusan maklumat
+                    resultsList.scrollIntoView({ behavior: "smooth" });
+                }
+            });
+        });
+
+        groupsDiv.appendChild(letterGroup);
+    });
+}
+
+// =========================================================================
 // PEMBANGUN CIRI-CIRI UTAMA DINAMIK DENGAN 4 LAJUR
 // =========================================================================
 function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "", tableDataVal = null) {
@@ -287,6 +379,8 @@ async function loadDataFromSupabase() {
     }
     dataIstilah = data;
     renderAdminList();
+    
+    renderAlphabeticalDirectory();
 }
 
 termForm.addEventListener("submit", async (e) => {
@@ -389,9 +483,18 @@ navButtons.forEach(button => {
     button.addEventListener("click", () => {
         navButtons.forEach(btn => btn.classList.remove("active"));
         viewSections.forEach(sec => sec.classList.remove("active"));
+        
         button.classList.add("active");
         const targetSection = button.getAttribute("data-target");
         document.getElementById(targetSection).classList.add("active");
+        
+        // 🌟 TAMBAHAN BARU: Semak halaman mana yang aktif
+        if (targetSection === 'sectionCarian') {
+            btnFloatingSearch.style.display = "flex";  // Paparkan semula butang di halaman carian
+        } else {
+            btnFloatingSearch.style.display = "none";  // Sembunyikan butang sepenuhnya di halaman admin
+        }
+
         if(targetSection === 'sectionAdmin') closeForm();
     });
 });
@@ -443,7 +546,7 @@ function renderSearchCard() {
     if (!selectedSearchItem) {
         resultsList.innerHTML = `
             <div class="welcome-message">
-                <strong>Selamat Datang!</strong><br>Sila taip nama terma di atas untuk memaparkan pilihan carian.
+                <strong>Selamat Datang!</strong><br>Sila taip nama terma di atas atau pilih daripada indeks abjad untuk memaparkan pilihan carian.
             </div>`;
         return;
     }
@@ -468,11 +571,10 @@ function renderSearchCard() {
                     }
                     
                     if (parsed.table_data && parsed.table_data.headers && parsed.table_data.rows && parsed.table_data.rows.length > 0) {
-                        const tTitle = parsed.table_data.table_title || "Contoh Struktur / Tasrif:";
+                        const tTitle = parsed.table_data.table_title ? parsed.table_data.table_title.trim() : "";
                         const tHeaders = parsed.table_data.headers || [];
                         const tRows = parsed.table_data.rows || [];
 
-                        // KEMASKINI: Logik Paparan Bersyarat Lajur ke-4
                         let hasColumn4 = false;
                         if (tHeaders[3] && tHeaders[3].trim() !== "") {
                             hasColumn4 = true;
@@ -482,10 +584,16 @@ function renderSearchCard() {
 
                         let th4Html = hasColumn4 ? `<th style="text-align: center;">${tHeaders[3] || ""}</th>` : "";
 
-                        formattedCharacteristics += `
+                        let titleHtml = "";
+                        if (tTitle !== "") {
+                            titleHtml = `
                             <div style="margin-top: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 12px;">
                                 <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">${tTitle}</span>
-                            </div>
+                            </div>`;
+                        }
+
+                        formattedCharacteristics += `
+                            ${titleHtml}
                             <div class="table-container" style="margin-bottom: 24px;">
                                 <table>
                                     <thead>
@@ -522,10 +630,9 @@ function renderSearchCard() {
         });
     }
 
-    // Sokongan Jadual Lama yang Berdiri Sendiri (Sekiranya Ada Rekod Terdahulu)
     let legacyStandaloneTableHtml = "";
     if (selectedSearchItem.table_data && selectedSearchItem.table_data.headers && selectedSearchItem.table_data.rows && selectedSearchItem.table_data.rows.length > 0) {
-        const tableTitle = selectedSearchItem.table_data.table_title || "Contoh Struktur / Tasrif:";
+        const tableTitle = selectedSearchItem.table_data.table_title ? selectedSearchItem.table_data.table_title.trim() : "";
         const tHeadersLegacy = selectedSearchItem.table_data.headers || [];
         const tRowsLegacy = selectedSearchItem.table_data.rows || [];
 
@@ -538,10 +645,16 @@ function renderSearchCard() {
 
         let th4LegacyHtml = hasColumn4Legacy ? `<th style="text-align: center;">${tHeadersLegacy[3] || ""}</th>` : "";
 
-        legacyStandaloneTableHtml = `
+        let legacyTitleHtml = "";
+        if (tableTitle !== "") {
+            legacyTitleHtml = `
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
                 <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${tableTitle}</span>
-            </div>
+            </div>`;
+        }
+
+        legacyStandaloneTableHtml = `
+            ${legacyTitleHtml}
             <div class="table-container">
                 <table>
                     <thead>
@@ -585,8 +698,32 @@ function renderSearchCard() {
             <div class="definition">${formattedDefinition}</div>
             <div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>
             ${legacyStandaloneTableHtml}
+            
+            <div style="margin-top: 36px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <button type="button" class="btn btn-primary" id="btnKembaliKeCarian" style="padding: 10px 20px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+                    🔍 Cari Istilah Lain / Kembali ke Atas
+                </button>
+            </div>
         </div>`;
+        
     resultsList.appendChild(card);
+
+    // KEMASKINI BARU: Event Listener untuk logik skrol ke atas & fokus automatik
+    const btnKembali = card.querySelector("#btnKembaliKeCarian");
+    if (btnKembali) {
+        btnKembali.addEventListener("click", () => {
+            if (searchInput) {
+                // Skrol ke kotak carian secara smooth
+                searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+                
+                // Berikan fokus pada input box selepas pergerakan skrol selesai
+                setTimeout(() => {
+                    searchInput.focus();
+                    searchInput.select(); // Pilih semua teks sedia ada untuk memudahkan carian baru
+                }, 400);
+            }
+        });
+    }
 }
 
 function renderAdminList(filterText = "") {
@@ -696,6 +833,26 @@ document.addEventListener("click", (e) => {
         suggestionsList.style.display = "none";
     }
 });
+
+// =========================================================================
+// LOGIK PEMBELAJARAN: BUTANG TERAPUNG KEMBALI KE CARIAN (BAWAH KIRI)
+// =========================================================================
+const btnFloatingSearch = document.getElementById("btnFloatingSearch");
+
+if (btnFloatingSearch) {
+    btnFloatingSearch.addEventListener("click", () => {
+        if (searchInput) {
+            // 1. Skrol halaman secara lancar ke kotak carian utama
+            searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            
+            // 2. Aktifkan kursor menaip di dalam kotak input selepas skrol selesai
+            setTimeout(() => {
+                searchInput.focus();
+                searchInput.select(); // Memilih teks sedia ada untuk carian baru pantas
+            }, 400);
+        }
+    });
+}
 
 checkUserSession();
 loadDataFromSupabase();
