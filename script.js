@@ -46,7 +46,7 @@ function renderAlphabeticalDirectory() {
 
     directoryContainer.innerHTML = `
         <div class="directory-container">
-            <div class="directory-title">📁 Senarai Indeks Istilah (Ikut Abjad)</div>
+            <div class="directory-title">📁 Senarai Istilah (Mengikut Huruf)</div>
             <div id="directoryGroups"></div>
         </div>
     `;
@@ -79,7 +79,7 @@ function renderAlphabeticalDirectory() {
 
         letterGroup.innerHTML = `
             <div class="dir-letter-header">
-                <span>Huruf ${letter} (${itemsCount} Istilah)</span>
+                <span> ${letter} (${itemsCount} Istilah)</span>
                 <span class="dir-toggle-icon">▼</span>
             </div>
             <div class="dir-letter-content">
@@ -546,7 +546,7 @@ function renderSearchCard() {
     if (!selectedSearchItem) {
         resultsList.innerHTML = `
             <div class="welcome-message">
-                <strong>Selamat Datang!</strong><br>Sila taip nama terma di atas atau pilih daripada indeks abjad untuk memaparkan pilihan carian.
+                <strong>Selamat Datang🏠</strong><br>Halaman ini masih dalam fasa percubaan dan penambahbaikan. Terima kasih atas kesabaran anda.😊
             </div>`;
         return;
     }
