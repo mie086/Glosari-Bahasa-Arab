@@ -6,23 +6,25 @@
     <title>Sistem Istilah Bahasa Arab</title>
     
     <link rel="stylesheet" href="style.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>Istilah Bahasa Arab</h1>
-        <p>Sistem carian dan panel pengurusan data Bahasa Arab (nahu/sorof)</p>
+        <h1>Kamus Istilah & Koleksi Ayat</h1>
+        <p>Bahasa Arab</p>
     </header>
 
+    <!-- KEMASKINI: Tab Navigasi ditambah untuk "Koleksi Ayat" -->
     <nav class="nav-tabs">
-        <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">Halaman Carian</button>
+        <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">Kamus Istilah</button>
+        <button class="nav-btn" id="tabAyat" data-target="sectionAyat">Koleksi Ayat</button>
         <button class="nav-btn" id="tabAdmin" data-target="sectionAdmin">Panel Admin</button>
     </nav>
 
     <main>
+        <!-- SEKSYEN 1: Halaman Carian Istilah (Sedia ada) -->
         <section id="sectionCarian" class="view-section active">
             <div class="search-wrapper">
                 <div class="search-box">
@@ -30,12 +32,26 @@
                 </div>
                 <div class="suggestions-list" id="suggestionsList"></div>
             </div>
-
             <div id="alphabeticalDirectory"></div>
-
             <div id="resultsList"></div>
         </section>
 
+        <!-- SEKSYEN 2 (BARU): Halaman Carian Koleksi Ayat -->
+        <section id="sectionAyat" class="view-section">
+            <div class="search-wrapper">
+                <div class="search-box">
+                    <input type="search" id="searchAyatInput" class="form-control" autocomplete="off" placeholder="Taip kata kunci carian (cth: jalan, pergi, مَشَى)...">
+                </div>
+                <div class="suggestions-list" id="suggestionsAyatList"></div>
+            </div>
+            <div id="resultsAyatList">
+                <div class="welcome-message">
+                    <strong>Koleksi Ayat & Terjemahan</strong><br>Sila taip kata dasar atau kata kunci (Melayu/Arab) di atas untuk memaparkan senarai ayat.
+                </div>
+            </div>
+        </section>
+
+        <!-- SEKSYEN 3: Panel Admin -->
         <section id="sectionAdmin" class="view-section">
             <div id="adminAuthBox" style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-color); max-width: 400px; margin: 0 auto;">
                 <h3 style="margin-bottom: 12px; color: var(--primary-color);">Log Masuk Pentadbir</h3>
@@ -53,14 +69,19 @@
             </div>
 
             <div id="adminDashboardBox" style="display: none;">
-                <div class="admin-top-bar">
+                <!-- KEMASKINI: Butang Tambah Data -->
+                <div class="admin-top-bar" style="flex-wrap: wrap; gap: 12px;">
                     <div>
                         <h3>Pangkalan Data Supabase SQL</h3>
                         <button id="btnLogKeluar" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 4px;">Log Keluar</button>
                     </div>
-                    <button class="btn btn-primary" id="btnBukaBorang">+ Tambah Istilah</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary" id="btnBukaBorang">+ Tambah Istilah</button>
+                        <button class="btn btn-success" id="btnBukaBorangAyat">+ Tambah Ayat</button>
+                    </div>
                 </div>
 
+                <!-- Borang: Tambah/Ubah Istilah (Sedia ada) -->
                 <div class="form-section" id="formSection">
                     <h2 id="formTitle">Tambah Istilah Baru</h2>
                     <form id="termForm">
@@ -112,29 +133,87 @@
 
                         <div class="form-actions">
                             <button type="button" class="btn btn-secondary" id="btnBatal">Batal</button>
-                            <button type="submit" class="btn btn-success">Simpan Data ke SQL</button>
+                            <button type="submit" class="btn btn-success">Simpan Data Istilah</button>
                         </div>
                     </form>
                 </div>
 
-                <div style="margin-top: 32px; margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
-                    <h3 style="color: var(--primary-color); margin: 0;">Senarai Istilah Pangkalan Data</h3>
-                    <input type="text" id="adminSearchInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari nama istilah, kategori, dll...">
+                <!-- KEMASKINI (BARU): Borang Tambah/Ubah Koleksi Ayat -->
+                <div class="form-section" id="formAyatSection">
+                    <h2 id="formAyatTitle">Tambah Koleksi Ayat Baru</h2>
+                    <form id="ayatForm">
+                        <input type="hidden" id="ayatId">
+                        
+                        <div class="form-group">
+                            <label for="ayatAr">Ayat Penuh (Bahasa Arab)</label>
+                            <textarea id="ayatAr" class="form-control arabic-input" rows="3" placeholder="Masukkan ayat dalam bahasa arab..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="terjemahanMs">Terjemahan Penuh (Bahasa Melayu)</label>
+                            <textarea id="terjemahanMs" class="form-control" rows="3" placeholder="Masukkan terjemahan ayat..." required></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="kataKunciAyat">Kata Kunci Carian (Pilihan)</label>
+                            <input type="text" id="kataKunciAyat" class="form-control" placeholder="cth: jalan, berjalan, مشى, يمشى">
+                            <small style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-top: 4px;">*Pilihan: Masukkan variasi kata dasar (Melayu & Arab) sebagai tambahan carian.</small>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="btnBatalAyat">Batal</button>
+                            <button type="submit" class="btn btn-success">Simpan Data Ayat</button>
+                        </div>
+                    </form>
                 </div>
 
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Istilah (MS)</th>
-                                <th style="text-align: right;">Istilah (AR)</th>
-                                <th>Kategori</th>
-                                <th>Tindakan</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminTableBody"></tbody>
-                    </table>
+                <!-- KEMASKINI (BARU): Penukar Paparan Jadual Panel Admin -->
+                <div style="margin-top: 32px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; display: flex; gap: 8px;">
+                    <button class="btn btn-primary" id="btnTabJadualIstilah" style="flex: 1;">Paparkan Jadual Istilah</button>
+                    <button class="btn btn-secondary" id="btnTabJadualAyat" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Ayat</button>
                 </div>
+
+                <!-- Pembungkus Jadual Istilah (Sedia ada) -->
+                <div id="jadualIstilahWrapper">
+                    <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                        <h3 style="color: var(--primary-color); margin: 0;">Jadual Istilah Nahu/Sarf</h3>
+                        <input type="text" id="adminSearchInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari nama istilah, kategori...">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Istilah (MS)</th>
+                                    <th style="text-align: right;">Istilah (AR)</th>
+                                    <th>Kategori</th>
+                                    <th>Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pembungkus Jadual Ayat (Baru) -->
+                <div id="jadualAyatWrapper" style="display: none;">
+                    <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                        <h3 style="color: var(--primary-color); margin: 0;">Jadual Koleksi Ayat</h3>
+                        <input type="text" id="adminSearchAyatInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari ayat, terjemahan, kata kunci...">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 40%; text-align: right;">Ayat (AR)</th>
+                                    <th style="width: 40%;">Terjemahan (MS)</th>
+                                    <th style="width: 20%;">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableAyatBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </section>
     </main>
