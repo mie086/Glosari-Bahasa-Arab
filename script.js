@@ -3,33 +3,48 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Pembolehubah Global
 let dataIstilah = [];
+let dataAyat = []; // KEMASKINI: Penyimpan data koleksi ayat
 let currentSearch = "";
 let selectedSearchItem = null;
+let selectedAyatItem = null; // KEMASKINI: Penyimpan carian ayat terpilih
 let lastFocusedTableInput = null; 
 
+// DOM Elements: Navigasi
 const navButtons = document.querySelectorAll(".nav-btn");
 const viewSections = document.querySelectorAll(".view-section");
+const btnFloatingSearch = document.getElementById("btnFloatingSearch");
+
+// DOM Elements: Carian Istilah
 const searchInput = document.getElementById("searchInput");
 const suggestionsList = document.getElementById("suggestionsList");
 const resultsList = document.getElementById("resultsList");
+const alphabeticalDirectory = document.getElementById("alphabeticalDirectory");
 
+// DOM Elements: Carian Ayat (BARU)
+const searchAyatInput = document.getElementById("searchAyatInput");
+const suggestionsAyatList = document.getElementById("suggestionsAyatList");
+const resultsAyatList = document.getElementById("resultsAyatList");
+
+// DOM Elements: Admin Auth
 const adminAuthBox = document.getElementById("adminAuthBox");
 const adminDashboardBox = document.getElementById("adminDashboardBox");
 const loginForm = document.getElementById("loginForm");
 const btnLogKeluar = document.getElementById("btnLogKeluar");
 
+// DOM Elements: Admin Pengurusan Istilah
 const adminTableBody = document.getElementById("adminTableBody");
 const formSection = document.getElementById("formSection");
 const termForm = document.getElementById("termForm");
 const btnBukaBorang = document.getElementById("btnBukaBorang");
 const btnBatal = document.getElementById("btnBatal");
 const formTitle = document.getElementById("formTitle");
-
 const ciriSectionsContainer = document.getElementById("ciriSectionsContainer");
 const btnTambahCiri = document.getElementById("btnTambahCiri");
 const adminSearchInput = document.getElementById("adminSearchInput");
 
+// Input Borang Istilah
 const inputId = document.getElementById("termId");
 const inputTitleMs = document.getElementById("titleMs");
 const inputTitleAr = document.getElementById("titleAr");
@@ -37,16 +52,389 @@ const inputCategory = document.getElementById("category");
 const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
 
-// =========================================================================
-// TAMBAHAN BARU: FUNGSI UTAMA BINA DIREKTORI COLLAPSE IKUT HURUF (AWAM)
-// =========================================================================
-function renderAlphabeticalDirectory() {
-    const directoryContainer = document.getElementById("alphabeticalDirectory");
-    if (!directoryContainer) return;
+// DOM Elements: Admin Pengurusan Ayat (BARU)
+const formAyatSection = document.getElementById("formAyatSection");
+const ayatForm = document.getElementById("ayatForm");
+const btnBukaBorangAyat = document.getElementById("btnBukaBorangAyat");
+const btnBatalAyat = document.getElementById("btnBatalAyat");
+const formAyatTitle = document.getElementById("formAyatTitle");
 
-    directoryContainer.innerHTML = `
+const btnTabJadualIstilah = document.getElementById("btnTabJadualIstilah");
+const btnTabJadualAyat = document.getElementById("btnTabJadualAyat");
+const jadualIstilahWrapper = document.getElementById("jadualIstilahWrapper");
+const jadualAyatWrapper = document.getElementById("jadualAyatWrapper");
+
+const adminSearchAyatInput = document.getElementById("adminSearchAyatInput");
+const adminTableAyatBody = document.getElementById("adminTableAyatBody");
+
+// Input Borang Ayat
+const inputAyatId = document.getElementById("ayatId");
+const inputAyatAr = document.getElementById("ayatAr");
+const inputTerjemahanMs = document.getElementById("terjemahanMs");
+const inputKataKunciAyat = document.getElementById("kataKunciAyat");
+
+// =========================================================================
+// LOGIK NAVIGASI & BUTANG TERAPUNG
+// =========================================================================
+navButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        navButtons.forEach(btn => btn.classList.remove("active"));
+        viewSections.forEach(sec => sec.classList.remove("active"));
+        
+        button.classList.add("active");
+        const targetSection = button.getAttribute("data-target");
+        document.getElementById(targetSection).classList.add("active");
+        
+        // Paparkan butang carian jika di tab Istilah ATAU tab Ayat
+        if (targetSection === 'sectionCarian' || targetSection === 'sectionAyat') {
+            btnFloatingSearch.style.display = "flex";
+        } else {
+            btnFloatingSearch.style.display = "none";
+        }
+
+        if(targetSection === 'sectionAdmin') {
+            closeForm();
+            closeFormAyat();
+        }
+    });
+});
+
+if (btnFloatingSearch) {
+    btnFloatingSearch.addEventListener("click", () => {
+        // Semak tab mana yang sedang aktif untuk skrol ke kotak input yang betul
+        const isAyatTab = document.getElementById("sectionAyat").classList.contains("active");
+        const targetInput = isAyatTab ? searchAyatInput : searchInput;
+
+        if (targetInput) {
+            targetInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => {
+                targetInput.focus();
+                targetInput.select(); 
+            }, 400);
+        }
+    });
+}
+
+// =========================================================================
+// FUNGSI UTAMA: LOAD DATA DARI SUPABASE (KEMASKINI)
+// =========================================================================
+async function loadDataFromSupabase() {
+    // 1. Muat turun jadual istilah
+    const resIstilah = await supabaseClient
+        .from('istilah_arab')
+        .select('*')
+        .order('title_ms', { ascending: true });
+    
+    if (resIstilah.error) {
+        console.error("Ralat memuatkan data istilah:", resIstilah.error.message);
+    } else {
+        dataIstilah = resIstilah.data;
+    }
+
+    // 2. Muat turun jadual ayat (BARU)
+    const resAyat = await supabaseClient
+        .from('koleksi_ayat')
+        .select('*');
+    
+    if (resAyat.error) {
+        console.error("Ralat memuatkan data ayat:", resAyat.error.message);
+    } else {
+        dataAyat = resAyat.data;
+    }
+
+    // Segar semula semua paparan jadual dan direktori
+    renderAdminList();
+    renderAdminAyatList();
+    renderAlphabeticalDirectory();
+}
+
+// =========================================================================
+// PAPARAN AWAM: CARIAN & KAD MAKLUMAT AYAT (BARU)
+// =========================================================================
+function handleSearchAyatInput(e) {
+    const val = e.target.value.trim().toLowerCase();
+    
+    // CADANGAN 1: Carian hanya dicetuskan jika user taip lebih dari 2 huruf
+    if (val.length < 3) {
+        selectedAyatItem = null;
+        suggestionsAyatList.style.display = "none";
+        renderSearchAyatCard();
+        return;
+    }
+
+    const matches = dataAyat.filter(item => {
+        return (item.kata_kunci && item.kata_kunci.toLowerCase().includes(val)) ||
+               (item.ayat_ar && item.ayat_ar.includes(val)) ||
+               (item.terjemahan_ms && item.terjemahan_ms.toLowerCase().includes(val));
+    });
+
+    // CADANGAN 2: Susun hasil carian supaya perkataan yang paling tepat berada di atas
+    matches.sort((a, b) => {
+        const aMs = (a.terjemahan_ms || "").toLowerCase();
+        const bMs = (b.terjemahan_ms || "").toLowerCase();
+        
+        // Jika teks bermula TEPAT dengan apa yang ditaip, letak di atas
+        if (aMs.startsWith(val) && !bMs.startsWith(val)) return -1;
+        if (!aMs.startsWith(val) && bMs.startsWith(val)) return 1;
+        return 0;
+    });
+
+    suggestionsAyatList.innerHTML = "";
+    if (matches.length > 0) {
+        matches.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerHTML = `
+                <div class="suggestion-info">
+                    <span class="suggestion-title">${item.terjemahan_ms.substring(0, 40)}...</span>
+                </div>
+                <div class="suggestion-arabic">${item.ayat_ar.substring(0, 30)}...</div>
+            `;
+            div.addEventListener("click", () => {
+                selectedAyatItem = item;
+                searchAyatInput.value = item.kata_kunci ? item.kata_kunci.split(',')[0] : "Carian Ayat";
+                suggestionsAyatList.style.display = "none";
+                renderSearchAyatCard();
+                resultsAyatList.scrollIntoView({ behavior: "smooth" });
+            });
+            suggestionsAyatList.appendChild(div);
+        });
+    } else {
+        suggestionsAyatList.innerHTML = `<div class="no-match-item">Tiada ayat yang sepadan dijumpai</div>`;
+    }
+    suggestionsAyatList.style.display = "block";
+}
+searchAyatInput.addEventListener("input", handleSearchAyatInput);
+
+function renderSearchAyatCard() {
+    resultsAyatList.innerHTML = "";
+    if (!selectedAyatItem) {
+        resultsAyatList.innerHTML = `
+            <div class="welcome-message">
+                <strong>Koleksi Ayat & Terjemahan</strong><br>Sila taip kata dasar atau kata kunci (Melayu/Arab) di atas untuk memaparkan senarai ayat.
+            </div>`;
+        return;
+    }
+
+    const card = document.createElement("div");
+    card.className = "card";
+    
+    // LOGIK BERSIFAT BERSYARAT: Hanya bina lencana jika kata_kunci tidak kosong
+    let kataKunciHtml = "";
+    if (selectedAyatItem.kata_kunci && selectedAyatItem.kata_kunci.trim() !== "") {
+        kataKunciHtml = `
+            <div style="margin-top: 20px; text-align: left;">
+                <span class="badge" style="background-color: #e2e8f0; color: #4a5568;">
+                    Kata Kunci: ${selectedAyatItem.kata_kunci}
+                </span>
+            </div>
+        `;
+    }
+
+    card.innerHTML = `
+        <div class="card-body" style="text-align: center; padding: 10px;">
+            <div style="font-family: var(--font-arabic); font-size: 2.2rem; color: var(--accent-color); direction: rtl; line-height: 1.8; margin-bottom: 24px;">
+                ${selectedAyatItem.ayat_ar}
+            </div>
+            
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 20px; font-size: 1.15rem; color: #2d3748; line-height: 1.6;">
+                <strong>Maksud:</strong><br>
+                ${selectedAyatItem.terjemahan_ms.replace(/\n/g, "<br>")}
+            </div>
+
+            <!-- Hanya muncul jika ada data kata kunci -->
+            ${kataKunciHtml}
+
+            <div style="margin-top: 36px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <button type="button" class="btn btn-primary" id="btnKembaliKeCarianAyat" style="padding: 10px 20px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
+                    🔍 Cari Ayat Lain / Kembali ke Atas
+                </button>
+            </div>
+        </div>`;
+        
+    resultsAyatList.appendChild(card);
+
+    const btnKembali = card.querySelector("#btnKembaliKeCarianAyat");
+    if (btnKembali) {
+        btnKembali.addEventListener("click", () => {
+            searchAyatInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => { searchAyatInput.focus(); searchAyatInput.select(); }, 400);
+        });
+    }
+}
+
+// Menyembunyikan menu suggestion jika klik di luar
+document.addEventListener("click", (e) => {
+    if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+        suggestionsList.style.display = "none";
+    }
+    if (!searchAyatInput.contains(e.target) && !suggestionsAyatList.contains(e.target)) {
+        suggestionsAyatList.style.display = "none";
+    }
+});
+
+
+// =========================================================================
+// PANEL ADMIN: KAWALAN PAPARAN JADUAL (ISTILAH VS AYAT)
+// =========================================================================
+btnTabJadualIstilah.addEventListener("click", () => {
+    jadualIstilahWrapper.style.display = "block";
+    jadualAyatWrapper.style.display = "none";
+    
+    btnTabJadualIstilah.classList.replace("btn-secondary", "btn-primary");
+    btnTabJadualIstilah.style.backgroundColor = "";
+    btnTabJadualIstilah.style.color = "";
+    
+    btnTabJadualAyat.classList.replace("btn-primary", "btn-secondary");
+    btnTabJadualAyat.style.backgroundColor = "var(--border-color)";
+    btnTabJadualAyat.style.color = "var(--text-color)";
+});
+
+btnTabJadualAyat.addEventListener("click", () => {
+    jadualIstilahWrapper.style.display = "none";
+    jadualAyatWrapper.style.display = "block";
+    
+    btnTabJadualAyat.classList.replace("btn-secondary", "btn-primary");
+    btnTabJadualAyat.style.backgroundColor = "";
+    btnTabJadualAyat.style.color = "";
+    
+    btnTabJadualIstilah.classList.replace("btn-primary", "btn-secondary");
+    btnTabJadualIstilah.style.backgroundColor = "var(--border-color)";
+    btnTabJadualIstilah.style.color = "var(--text-color)";
+});
+
+btnBukaBorangAyat.addEventListener("click", () => {
+    closeForm(); // Tutup borang istilah jika terbuka
+    ayatForm.reset();
+    inputAyatId.value = "";
+    formAyatTitle.textContent = "Tambah Koleksi Ayat Baru";
+    formAyatSection.classList.add("active");
+});
+
+btnBatalAyat.addEventListener("click", closeFormAyat);
+function closeFormAyat() { 
+    formAyatSection.classList.remove("active"); 
+    ayatForm.reset(); 
+    inputAyatId.value = ""; 
+}
+
+// =========================================================================
+// PANEL ADMIN: CRUD KOLEKSI AYAT (BARU)
+// =========================================================================
+function renderAdminAyatList(filterText = "") {
+    adminTableAyatBody.innerHTML = "";
+    const lowerFilter = filterText.toLowerCase();
+
+    const filteredData = dataAyat.filter(item => {
+        return (item.ayat_ar && item.ayat_ar.toLowerCase().includes(lowerFilter)) ||
+               (item.terjemahan_ms && item.terjemahan_ms.toLowerCase().includes(lowerFilter)) ||
+               (item.kata_kunci && item.kata_kunci.toLowerCase().includes(lowerFilter));
+    });
+
+    if (filteredData.length === 0) {
+        adminTableAyatBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 24px; color: var(--text-muted);">Tiada rekod ayat dijumpai.</td></tr>`;
+        return;
+    }
+
+    filteredData.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td class="td-arabic" style="font-size: 1.1rem;">${item.ayat_ar}</td>
+            <td>
+                <strong>${item.terjemahan_ms}</strong><br>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Kata kunci: ${item.kata_kunci}</span>
+            </td>
+            <td>
+                <div class="actions-cell" style="display:flex; gap:6px;">
+                    <button class="btn btn-edit" onclick="editAyat('${item.id}')">Ubah</button>
+                    <button class="btn btn-danger" onclick="deleteAyat('${item.id}')">Padam</button>
+                </div>
+            </td>`;
+        adminTableAyatBody.appendChild(tr);
+    });
+}
+
+if (adminSearchAyatInput) {
+    adminSearchAyatInput.addEventListener("input", (e) => {
+        renderAdminAyatList(e.target.value.trim());
+    });
+}
+
+// Hantar Data Ayat ke Supabase
+ayatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    // Guna UUID sedia ada jika mengemaskini, atau tiada ID (Supabase akan jana baru)
+    const ayatObject = {
+        ayat_ar: inputAyatAr.value.trim(),
+        terjemahan_ms: inputTerjemahanMs.value.trim(),
+        kata_kunci: inputKataKunciAyat.value.trim()
+    };
+
+    if (inputAyatId.value) {
+        ayatObject.id = inputAyatId.value;
+    }
+
+    const { error } = await supabaseClient
+        .from('koleksi_ayat')
+        .upsert([ayatObject]);
+
+    if (error) {
+        alert("Ralat Keselamatan RLS: " + error.message);
+    } else {
+        selectedAyatItem = null;
+        searchAyatInput.value = "";
+        closeFormAyat();
+        await loadDataFromSupabase();
+        renderSearchAyatCard();
+    }
+});
+
+// Edit Ayat
+window.editAyat = function(id) {
+    const item = dataAyat.find(item => item.id === id);
+    if (!item) return;
+
+    closeForm(); // Tutup borang istilah
+    formAyatTitle.textContent = "Ubah Koleksi Ayat";
+    inputAyatId.value = item.id;
+    inputAyatAr.value = item.ayat_ar;
+    inputTerjemahanMs.value = item.terjemahan_ms;
+    inputKataKunciAyat.value = item.kata_kunci || "";
+    
+    formAyatSection.classList.add("active");
+    formAyatSection.scrollIntoView({ behavior: "smooth" });
+};
+
+// Padam Ayat
+window.deleteAyat = async function(id) {
+    if (confirm("Adakah anda pasti mahu memadam koleksi ayat ini?")) {
+        const { error } = await supabaseClient
+            .from('koleksi_ayat')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            alert("Ralat Keselamatan RLS: " + error.message);
+        } else {
+            selectedAyatItem = null;
+            searchAyatInput.value = "";
+            await loadDataFromSupabase();
+            renderSearchAyatCard();
+        }
+    }
+};
+
+// =========================================================================
+// KOD SEDIA ADA: DIREKTORI ABJAD, CARIAN ISTILAH, DAN ADMIN ISTILAH
+// =========================================================================
+
+function renderAlphabeticalDirectory() {
+    if (!alphabeticalDirectory) return;
+
+    alphabeticalDirectory.innerHTML = `
         <div class="directory-container">
-            <div class="directory-title">📁 Senarai Istilah (Mengikut Huruf)</div>
+            <div class="directory-title">📁 Senarai Indeks Istilah (Ikut Abjad)</div>
             <div id="directoryGroups"></div>
         </div>
     `;
@@ -54,17 +442,13 @@ function renderAlphabeticalDirectory() {
     const groupsDiv = document.getElementById("directoryGroups");
     const groups = {};
 
-    // Pecahkan data istilah mengikut huruf pertama title_ms
     dataIstilah.forEach(item => {
         if (!item.title_ms) return;
         const firstLetter = item.title_ms.trim().charAt(0).toUpperCase();
-        if (!groups[firstLetter]) {
-            groups[firstLetter] = [];
-        }
+        if (!groups[firstLetter]) { groups[firstLetter] = []; }
         groups[firstLetter].push(item);
     });
 
-    // Susun abjad A-Z
     const sortedLetters = Object.keys(groups).sort();
 
     if (sortedLetters.length === 0) {
@@ -79,7 +463,7 @@ function renderAlphabeticalDirectory() {
 
         letterGroup.innerHTML = `
             <div class="dir-letter-header">
-                <span> ${letter} (${itemsCount} Istilah)</span>
+                <span>Huruf ${letter} (${itemsCount} Istilah)</span>
                 <span class="dir-toggle-icon">▼</span>
             </div>
             <div class="dir-letter-content">
@@ -96,7 +480,6 @@ function renderAlphabeticalDirectory() {
         const content = letterGroup.querySelector(".dir-letter-content");
         const icon = letterGroup.querySelector(".dir-toggle-icon");
 
-        // Logik Buka/Tutup (Collapse)
         header.addEventListener("click", () => {
             const isOpen = content.classList.contains("open");
             if (isOpen) {
@@ -108,7 +491,6 @@ function renderAlphabeticalDirectory() {
             }
         });
 
-        // Logik apabila istilah ditekan -> Bawa ke maklumat penuh istilah
         const items = letterGroup.querySelectorAll(".dir-item");
         items.forEach(itemEl => {
             itemEl.addEventListener("click", () => {
@@ -118,8 +500,6 @@ function renderAlphabeticalDirectory() {
                     selectedSearchItem = foundItem;
                     searchInput.value = foundItem.title_ms;
                     renderSearchCard();
-                    
-                    // Skrol lancar terus ke kad keputusan maklumat
                     resultsList.scrollIntoView({ behavior: "smooth" });
                 }
             });
@@ -128,376 +508,6 @@ function renderAlphabeticalDirectory() {
         groupsDiv.appendChild(letterGroup);
     });
 }
-
-// =========================================================================
-// PEMBANGUN CIRI-CIRI UTAMA DINAMIK DENGAN 4 LAJUR
-// =========================================================================
-function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "", tableDataVal = null) {
-    const uniqueId = "ciriContent_" + Date.now() + Math.floor(Math.random() * 1000);
-    const tableContainerId = "ciriTableBox_" + Date.now() + Math.floor(Math.random() * 1000);
-    const rowsContainerId = "ciriTableRows_" + Date.now() + Math.floor(Math.random() * 1000);
-
-    const sectionDiv = document.createElement("div");
-    sectionDiv.className = "ciri-section-item";
-    sectionDiv.style = "background: #fff; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-bottom: 12px; position: relative;";
-    
-    let isTableVisible = tableDataVal ? "block" : "none";
-    let btnToggleText = tableDataVal ? "✓ Buang Jadual" : "+ Tambah Jadual Contoh";
-    let btnToggleClass = tableDataVal ? "btn-danger" : "btn-primary";
-
-    let tTitle = tableDataVal && tableDataVal.table_title ? tableDataVal.table_title : "";
-    let th1_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[0] || "") : "";
-    let th2_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[1] || "") : "";
-    let th3_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[2] || "") : "";
-    // KEMASKINI: Menambah Header 4
-    let th4_val = tableDataVal && tableDataVal.headers && tableDataVal.headers[3] ? tableDataVal.headers[3] : "";
-
-    sectionDiv.innerHTML = `
-        <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
-        
-        <div class="form-group" style="margin-top: 4px; margin-right: 40px;">
-            <label>Tajuk Besar (Pilihan)</label>
-            <input type="text" class="form-control ciri-main-title-input" placeholder="Contoh: Baris akhir berubah" value="${mainTitleVal}">
-        </div>
-
-        <div class="form-group" style="margin-top: 4px;">
-            <label>Subtajuk (Pilihan)</label>
-            <input type="text" class="form-control ciri-sub-title-input" placeholder="Contoh: Rafa' / Nasab / Jar" value="${subTitleVal}">
-        </div>
-        
-        <div class="form-group" style="margin-bottom:12px;">
-            <label>Penerangan</label>
-            <div class="text-toolbar">
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'u')"><u>U</u></button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'i')"><i>I</i></button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'bullet')">• Senarai</button>
-                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('${uniqueId}', 'color', this.value)"></div>
-            </div>
-            <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${contentVal}</textarea>
-        </div>
-
-        <button type="button" class="btn ${btnToggleClass} btn-toggle-table" style="padding: 4px 10px; font-size: 0.8rem; margin-bottom: 4px;">${btnToggleText}</button>
-
-        <div class="ciri-table-builder" id="${tableContainerId}" style="display: ${isTableVisible}; background: #f7fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 8px;">
-            <div class="form-group" style="margin-bottom: 8px;">
-                <label style="font-size: 0.85rem; color: var(--accent-color); font-weight: 600;">Tajuk Jadual (Pilihan)</label>
-                <input type="text" class="form-control ciri-table-title" placeholder="Contoh: Contoh Tasrif / Struktur" value="${tTitle}">
-            </div>
-            
-            <div class="text-toolbar" style="margin-bottom: 8px; width: 100%;">
-                <button type="button" class="toolbar-btn" onclick="applyTableFormat('b')" title="Tebal">B</button>
-                <button type="button" class="toolbar-btn" onclick="applyTableFormat('u')" title="Garis Bawah"><u>U</u></button>
-                <button type="button" class="toolbar-btn" onclick="applyTableFormat('i')" title="Senget"><i>I</i></button>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
-                <input type="text" class="form-control th-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 1" value="${th1_val}">
-                <input type="text" class="form-control th-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 2" value="${th2_val}">
-                <input type="text" class="form-control th-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 3" value="${th3_val}">
-                <input type="text" class="form-control th-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 4" value="${th4_val}">
-            </div>
-
-            <div class="ciri-rows-area" id="${rowsContainerId}" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
-            <button type="button" class="btn btn-primary btn-add-row-ciri" style="padding: 4px 8px; font-size: 0.75rem;">+ Tambah Baris Data</button>
-        </div>
-    `;
-
-    const tableBox = sectionDiv.querySelector(`#${tableContainerId}`);
-    const btnToggleTable = sectionDiv.querySelector(".btn-toggle-table");
-    const rowsArea = sectionDiv.querySelector(`#${rowsContainerId}`);
-    const btnAddRowCiri = sectionDiv.querySelector(".btn-add-row-ciri");
-
-    // KEMASKINI: Menerima 4 Parameter
-    function addCiriTableRow(v1 = "", v2 = "", v3 = "", v4 = "") {
-        const rowDiv = document.createElement("div");
-        rowDiv.className = "builder-row-item";
-        // KEMASKINI: Grid ditukar kepada 4 kotak + 1 butang padam
-        rowDiv.style = "display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 6px; align-items: center;";
-        rowDiv.innerHTML = `
-            <input type="text" class="form-control col-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 1" value="${v1}">
-            <input type="text" class="form-control col-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 2" value="${v2}">
-            <input type="text" class="form-control col-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 3" value="${v3}">
-            <input type="text" class="form-control col-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 4" value="${v4}">
-            <button type="button" class="btn btn-danger btn-remove-row" style="padding: 4px 8px; font-size:0.75rem;">X</button>
-        `;
-        rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
-        rowsArea.appendChild(rowDiv);
-    }
-
-    if (tableDataVal && tableDataVal.rows) {
-        tableDataVal.rows.forEach(r => addCiriTableRow(r[0], r[1], r[2], r[3]));
-    }
-
-    btnAddRowCiri.addEventListener("click", () => addCiriTableRow());
-
-    btnToggleTable.addEventListener("click", () => {
-        if (tableBox.style.display === "none") {
-            tableBox.style.display = "block";
-            btnToggleTable.textContent = "✓ Buang Jadual";
-            btnToggleTable.classList.remove("btn-primary");
-            btnToggleTable.classList.add("btn-danger");
-            if (rowsArea.children.length === 0) {
-                addCiriTableRow();
-                addCiriTableRow();
-            }
-        } else {
-            tableBox.style.display = "none";
-            btnToggleTable.textContent = "+ Tambah Jadual Contoh";
-            btnToggleTable.classList.remove("btn-danger");
-            btnToggleTable.classList.add("btn-primary");
-        }
-    });
-
-    sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
-    ciriSectionsContainer.appendChild(sectionDiv);
-}
-btnTambahCiri.addEventListener("click", () => createCiriSectionInput());
-
-document.addEventListener('focusin', function(e) {
-    if (e.target && e.target.classList.contains('table-input-target')) {
-        lastFocusedTableInput = e.target;
-    }
-});
-
-window.applyTableFormat = function(type, colorValue = null) {
-    if (!lastFocusedTableInput) {
-        alert("Sila klik di dalam mana-mana petak jadual (Header atau Lajur) terlebih dahulu sebelum menekan butang format.");
-        return;
-    }
-
-    const input = lastFocusedTableInput;
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    const originalText = input.value;
-    const selectedText = originalText.substring(start, end);
-
-    let tagOpen = "";
-    let tagClose = "";
-
-    switch (type) {
-        case 'b': tagOpen = "<b>"; tagClose = "</b>"; break;
-        case 'u': tagOpen = "<u>"; tagClose = "</u>"; break;
-        case 'i': tagOpen = "<i>"; tagClose = "</i>"; break;
-        case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; break;
-    }
-
-    const modifiedText = tagOpen + selectedText + tagClose;
-    input.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
-
-    input.focus();
-    input.selectionStart = start;
-    input.selectionEnd = start + modifiedText.length;
-    input.dispatchEvent(new Event('input'));
-};
-
-window.applyFormat = function(textareaId, type, colorValue = null) {
-    const textarea = document.getElementById(textareaId);
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const originalText = textarea.value;
-    const selectedText = originalText.substring(start, end);
-
-    let tagOpen = "";
-    let tagClose = "";
-    let modifiedText = "";
-
-    switch (type) {
-        case 'b': tagOpen = "<b>"; tagClose = "</b>"; modifiedText = tagOpen + selectedText + tagClose; break;
-        case 'u': tagOpen = "<u>"; tagClose = "</u>"; modifiedText = tagOpen + selectedText + tagClose; break;
-        case 'i': tagOpen = "<i>"; tagClose = "</i>"; modifiedText = tagOpen + selectedText + tagClose; break;
-        case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; modifiedText = tagOpen + selectedText + tagClose; break;
-        case 'bullet':
-            if (selectedText.trim().length > 0) {
-                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line.trim()}</li>` : '').filter(l => l).join(' ');
-                modifiedText = `<ul class="inline-bullet-list">${lines}</ul>`;
-            } else {
-                modifiedText = `<ul class="inline-bullet-list"><li>Teks Senarai</li></ul>`;
-            }
-            break;
-    }
-
-    textarea.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
-    textarea.value = textarea.value.replace(/<\/ul>([\s\n]*?)<ul>/gi, '$1');
-
-    textarea.focus();
-    textarea.selectionStart = start;
-    textarea.selectionEnd = start + modifiedText.length;
-    textarea.dispatchEvent(new Event('input'));
-};
-
-async function checkUserSession() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    updateAdminUI(session);
-}
-
-function updateAdminUI(session) {
-    if (session) {
-        adminAuthBox.style.display = "none";
-        adminDashboardBox.style.display = "block";
-        renderAdminList();
-    } else {
-        adminAuthBox.style.display = "block";
-        adminDashboardBox.style.display = "none";
-    }
-}
-
-loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("loginEmail").value;
-    const password = document.getElementById("loginPassword").value;
-
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
-    if (error) {
-        alert("Gagal Log Masuk: " + error.message);
-    } else {
-        updateAdminUI(data.session);
-    }
-});
-
-btnLogKeluar.addEventListener("click", async () => {
-    await supabaseClient.auth.signOut();
-    updateAdminUI(null);
-});
-
-supabaseClient.auth.onAuthStateChange((_event, session) => {
-    updateAdminUI(session);
-});
-
-async function loadDataFromSupabase() {
-    const { data, error } = await supabaseClient
-        .from('istilah_arab')
-        .select('*')
-        .order('title_ms', { ascending: true });
-    
-    if (error) {
-        console.error("Ralat memuatkan data dari Supabase:", error.message);
-        return;
-    }
-    dataIstilah = data;
-    renderAdminList();
-    
-    renderAlphabeticalDirectory();
-}
-
-termForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    
-    const id = inputId.value || "term-" + Date.now();
-    const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
-
-    const ciriElements = ciriSectionsContainer.querySelectorAll(".ciri-section-item");
-    const chrArray = [];
-    
-    ciriElements.forEach(item => {
-        const mTitle = item.querySelector(".ciri-main-title-input").value.trim();
-        const sTitle = item.querySelector(".ciri-sub-title-input").value.trim();
-        const content = item.querySelector(".ciri-content-input").value.trim();
-        
-        const tableBox = item.querySelector(".ciri-table-builder");
-        let embeddedTableObj = null;
-        if (tableBox && tableBox.style.display !== "none") {
-            const tTitle = tableBox.querySelector(".ciri-table-title").value.trim();
-            const h1 = tableBox.querySelector(".th-1").value.trim();
-            const h2 = tableBox.querySelector(".th-2").value.trim();
-            const h3 = tableBox.querySelector(".th-3").value.trim();
-            const h4 = tableBox.querySelector(".th-4").value.trim(); // KEMASKINI: Baca H4
-            
-            const rItems = tableBox.querySelectorAll(".builder-row-item");
-            const rowsData = [];
-            rItems.forEach(row => {
-                const v1 = row.querySelector(".col-1").value.trim();
-                const v2 = row.querySelector(".col-2").value.trim();
-                const v3 = row.querySelector(".col-3").value.trim();
-                const v4 = row.querySelector(".col-4").value.trim(); // KEMASKINI: Baca V4
-                if (v1 || v2 || v3 || v4) rowsData.push([v1, v2, v3, v4]);
-            });
-            
-            if (h1 || h2 || h3 || h4 || rowsData.length > 0) {
-                embeddedTableObj = {
-                    table_title: tTitle,
-                    headers: [h1, h2, h3, h4],
-                    rows: rowsData
-                };
-            }
-        }
-
-        if (mTitle || sTitle || content || embeddedTableObj) {
-            chrArray.push(JSON.stringify({ 
-                mainTitle: mTitle, 
-                subTitle: sTitle, 
-                content: content,
-                table_data: embeddedTableObj
-            }));
-        }
-    });
-
-    const termObject = {
-        id: id,
-        title_ms: inputTitleMs.value,
-        title_ar: inputTitleAr.value,
-        category: inputCategory.value,
-        definition: inputDefinition.value,
-        characteristics: chrArray,
-        table_data: null, 
-        keywords: kwArray
-    };
-
-    const { error } = await supabaseClient
-        .from('istilah_arab')
-        .upsert([termObject]);
-
-    if (error) {
-        alert("Ralat Keselamatan RLS / Sistem: " + error.message);
-    } else {
-        selectedSearchItem = null;
-        searchInput.value = "";
-        closeForm();
-        await loadDataFromSupabase();
-        renderSearchCard();
-    }
-});
-
-window.deleteItem = async function(id) {
-    if (confirm("Adakah anda pasti mahu memadam istilah ini dari pangkalan data cloud?")) {
-        const { error } = await supabaseClient
-            .from('istilah_arab')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            alert("Ralat Keselamatan RLS: " + error.message);
-        } else {
-            selectedSearchItem = null;
-            searchInput.value = "";
-            await loadDataFromSupabase();
-            renderSearchCard();
-        }
-    }
-};
-
-navButtons.forEach(button => {
-    button.addEventListener("click", () => {
-        navButtons.forEach(btn => btn.classList.remove("active"));
-        viewSections.forEach(sec => sec.classList.remove("active"));
-        
-        button.classList.add("active");
-        const targetSection = button.getAttribute("data-target");
-        document.getElementById(targetSection).classList.add("active");
-        
-        // 🌟 TAMBAHAN BARU: Semak halaman mana yang aktif
-        if (targetSection === 'sectionCarian') {
-            btnFloatingSearch.style.display = "flex";  // Paparkan semula butang di halaman carian
-        } else {
-            btnFloatingSearch.style.display = "none";  // Sembunyikan butang sepenuhnya di halaman admin
-        }
-
-        if(targetSection === 'sectionAdmin') closeForm();
-    });
-});
 
 function handleSearchInput(e) {
     currentSearch = e.target.value.trim();
@@ -532,6 +542,7 @@ function handleSearchInput(e) {
                 searchInput.value = item.title_ms;
                 suggestionsList.style.display = "none";
                 renderSearchCard();
+                resultsList.scrollIntoView({ behavior: "smooth" });
             });
             suggestionsList.appendChild(div);
         });
@@ -540,13 +551,14 @@ function handleSearchInput(e) {
     }
     suggestionsList.style.display = "block";
 }
+searchInput.addEventListener("input", handleSearchInput);
 
 function renderSearchCard() {
     resultsList.innerHTML = "";
     if (!selectedSearchItem) {
         resultsList.innerHTML = `
             <div class="welcome-message">
-                <strong>Selamat Datang🏠</strong><br>Halaman ini masih dalam fasa percubaan dan penambahbaikan. Terima kasih atas kesabaran anda.😊
+                <strong>Selamat Datang!</strong><br>Sila taip nama terma di atas atau pilih daripada indeks abjad untuk memaparkan pilihan carian.
             </div>`;
         return;
     }
@@ -708,20 +720,11 @@ function renderSearchCard() {
         
     resultsList.appendChild(card);
 
-    // KEMASKINI BARU: Event Listener untuk logik skrol ke atas & fokus automatik
     const btnKembali = card.querySelector("#btnKembaliKeCarian");
     if (btnKembali) {
         btnKembali.addEventListener("click", () => {
-            if (searchInput) {
-                // Skrol ke kotak carian secara smooth
-                searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
-                
-                // Berikan fokus pada input box selepas pergerakan skrol selesai
-                setTimeout(() => {
-                    searchInput.focus();
-                    searchInput.select(); // Pilih semua teks sedia ada untuk memudahkan carian baru
-                }, 400);
-            }
+            searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => { searchInput.focus(); searchInput.select(); }, 400);
         });
     }
 }
@@ -764,10 +767,78 @@ if (adminSearchInput) {
     });
 }
 
+termForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const id = inputId.value || "term-" + Date.now();
+    const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
+
+    const ciriElements = ciriSectionsContainer.querySelectorAll(".ciri-section-item");
+    const chrArray = [];
+    
+    ciriElements.forEach(item => {
+        const mTitle = item.querySelector(".ciri-main-title-input").value.trim();
+        const sTitle = item.querySelector(".ciri-sub-title-input").value.trim();
+        const content = item.querySelector(".ciri-content-input").value.trim();
+        
+        const tableBox = item.querySelector(".ciri-table-builder");
+        let embeddedTableObj = null;
+        if (tableBox && tableBox.style.display !== "none") {
+            const tTitle = tableBox.querySelector(".ciri-table-title").value.trim();
+            const h1 = tableBox.querySelector(".th-1").value.trim();
+            const h2 = tableBox.querySelector(".th-2").value.trim();
+            const h3 = tableBox.querySelector(".th-3").value.trim();
+            const h4 = tableBox.querySelector(".th-4").value.trim();
+            
+            const rItems = tableBox.querySelectorAll(".builder-row-item");
+            const rowsData = [];
+            rItems.forEach(row => {
+                const v1 = row.querySelector(".col-1").value.trim();
+                const v2 = row.querySelector(".col-2").value.trim();
+                const v3 = row.querySelector(".col-3").value.trim();
+                const v4 = row.querySelector(".col-4").value.trim();
+                if (v1 || v2 || v3 || v4) rowsData.push([v1, v2, v3, v4]);
+            });
+            
+            if (h1 || h2 || h3 || h4 || rowsData.length > 0) {
+                embeddedTableObj = { table_title: tTitle, headers: [h1, h2, h3, h4], rows: rowsData };
+            }
+        }
+
+        if (mTitle || sTitle || content || embeddedTableObj) {
+            chrArray.push(JSON.stringify({ mainTitle: mTitle, subTitle: sTitle, content: content, table_data: embeddedTableObj }));
+        }
+    });
+
+    const termObject = {
+        id: id,
+        title_ms: inputTitleMs.value,
+        title_ar: inputTitleAr.value,
+        category: inputCategory.value,
+        definition: inputDefinition.value,
+        characteristics: chrArray,
+        table_data: null, 
+        keywords: kwArray
+    };
+
+    const { error } = await supabaseClient.from('istilah_arab').upsert([termObject]);
+
+    if (error) {
+        alert("Ralat Keselamatan RLS / Sistem: " + error.message);
+    } else {
+        selectedSearchItem = null;
+        searchInput.value = "";
+        closeForm();
+        await loadDataFromSupabase();
+        renderSearchCard();
+    }
+});
+
 window.editItem = function(id) {
     const item = dataIstilah.find(item => item.id === id);
     if (!item) return;
 
+    closeFormAyat(); // Tutup borang ayat jika terbuka
     formTitle.textContent = "Ubah Maklumat Istilah";
     inputId.value = item.id;
     inputTitleMs.value = item.title_ms;
@@ -808,14 +879,28 @@ window.editItem = function(id) {
     formSection.scrollIntoView({ behavior: "smooth" });
 };
 
+window.deleteItem = async function(id) {
+    if (confirm("Adakah anda pasti mahu memadam istilah ini dari pangkalan data cloud?")) {
+        const { error } = await supabaseClient.from('istilah_arab').delete().eq('id', id);
+
+        if (error) {
+            alert("Ralat Keselamatan RLS: " + error.message);
+        } else {
+            selectedSearchItem = null;
+            searchInput.value = "";
+            await loadDataFromSupabase();
+            renderSearchCard();
+        }
+    }
+};
+
 btnBukaBorang.addEventListener("click", () => {
+    closeFormAyat();
     termForm.reset();
     inputId.value = "";
     ciriSectionsContainer.innerHTML = "";
-    
     formTitle.textContent = "Tambah Istilah Baru";
     formSection.classList.add("active");
-    
     createCiriSectionInput();
 });
 
@@ -827,33 +912,225 @@ function closeForm() {
     ciriSectionsContainer.innerHTML = "";
 }
 
-searchInput.addEventListener("input", handleSearchInput);
-document.addEventListener("click", (e) => {
-    if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
-        suggestionsList.style.display = "none";
+function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal = "", tableDataVal = null) {
+    const uniqueId = "ciriContent_" + Date.now() + Math.floor(Math.random() * 1000);
+    const tableContainerId = "ciriTableBox_" + Date.now() + Math.floor(Math.random() * 1000);
+    const rowsContainerId = "ciriTableRows_" + Date.now() + Math.floor(Math.random() * 1000);
+
+    const sectionDiv = document.createElement("div");
+    sectionDiv.className = "ciri-section-item";
+    sectionDiv.style = "background: #fff; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-bottom: 12px; position: relative;";
+    
+    let isTableVisible = tableDataVal ? "block" : "none";
+    let btnToggleText = tableDataVal ? "✓ Buang Jadual" : "+ Tambah Jadual Contoh";
+    let btnToggleClass = tableDataVal ? "btn-danger" : "btn-primary";
+
+    let tTitle = tableDataVal && tableDataVal.table_title ? tableDataVal.table_title : "";
+    let th1_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[0] || "") : "";
+    let th2_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[1] || "") : "";
+    let th3_val = tableDataVal && tableDataVal.headers ? (tableDataVal.headers[2] || "") : "";
+    let th4_val = tableDataVal && tableDataVal.headers && tableDataVal.headers[3] ? tableDataVal.headers[3] : "";
+
+    sectionDiv.innerHTML = `
+        <button type="button" class="btn btn-danger btn-remove-section" style="position: absolute; top: 12px; right: 12px; padding: 4px 10px;" title="Padam Seksyen Ini">X</button>
+        
+        <div class="form-group" style="margin-top: 4px; margin-right: 40px;">
+            <label>Tajuk Besar (Pilihan)</label>
+            <input type="text" class="form-control ciri-main-title-input" placeholder="Contoh: Baris akhir berubah" value="${mainTitleVal}">
+        </div>
+
+        <div class="form-group" style="margin-top: 4px;">
+            <label>Subtajuk (Pilihan)</label>
+            <input type="text" class="form-control ciri-sub-title-input" placeholder="Contoh: Rafa' / Nasab / Jar" value="${subTitleVal}">
+        </div>
+        
+        <div class="form-group" style="margin-bottom:12px;">
+            <label>Penerangan</label>
+            <div class="text-toolbar">
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'u')"><u>U</u></button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'i')"><i>I</i></button>
+                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'bullet')">• Senarai</button>
+                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('${uniqueId}', 'color', this.value)"></div>
+            </div>
+            <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${contentVal}</textarea>
+        </div>
+
+        <button type="button" class="btn ${btnToggleClass} btn-toggle-table" style="padding: 4px 10px; font-size: 0.8rem; margin-bottom: 4px;">${btnToggleText}</button>
+
+        <div class="ciri-table-builder" id="${tableContainerId}" style="display: ${isTableVisible}; background: #f7fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 8px;">
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 0.85rem; color: var(--accent-color); font-weight: 600;">Tajuk Jadual (Pilihan)</label>
+                <input type="text" class="form-control ciri-table-title" placeholder="Contoh: Contoh Tasrif / Struktur" value="${tTitle}">
+            </div>
+            
+            <div class="text-toolbar" style="margin-bottom: 8px; width: 100%;">
+                <button type="button" class="toolbar-btn" onclick="applyTableFormat('b')" title="Tebal">B</button>
+                <button type="button" class="toolbar-btn" onclick="applyTableFormat('u')" title="Garis Bawah"><u>U</u></button>
+                <button type="button" class="toolbar-btn" onclick="applyTableFormat('i')" title="Senget"><i>I</i></button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+                <input type="text" class="form-control th-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 1" value="${th1_val}">
+                <input type="text" class="form-control th-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 2" value="${th2_val}">
+                <input type="text" class="form-control th-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 3" value="${th3_val}">
+                <input type="text" class="form-control th-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 4" value="${th4_val}">
+            </div>
+
+            <div class="ciri-rows-area" id="${rowsContainerId}" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
+            <button type="button" class="btn btn-primary btn-add-row-ciri" style="padding: 4px 8px; font-size: 0.75rem;">+ Tambah Baris Data</button>
+        </div>
+    `;
+
+    const tableBox = sectionDiv.querySelector(`#${tableContainerId}`);
+    const btnToggleTable = sectionDiv.querySelector(".btn-toggle-table");
+    const rowsArea = sectionDiv.querySelector(`#${rowsContainerId}`);
+    const btnAddRowCiri = sectionDiv.querySelector(".btn-add-row-ciri");
+
+    function addCiriTableRow(v1 = "", v2 = "", v3 = "", v4 = "") {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "builder-row-item";
+        rowDiv.style = "display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 6px; align-items: center;";
+        rowDiv.innerHTML = `
+            <input type="text" class="form-control col-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 1" value="${v1}">
+            <input type="text" class="form-control col-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 2" value="${v2}">
+            <input type="text" class="form-control col-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 3" value="${v3}">
+            <input type="text" class="form-control col-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 4" value="${v4}">
+            <button type="button" class="btn btn-danger btn-remove-row" style="padding: 4px 8px; font-size:0.75rem;">X</button>
+        `;
+        rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
+        rowsArea.appendChild(rowDiv);
+    }
+
+    if (tableDataVal && tableDataVal.rows) {
+        tableDataVal.rows.forEach(r => addCiriTableRow(r[0], r[1], r[2], r[3]));
+    }
+
+    btnAddRowCiri.addEventListener("click", () => addCiriTableRow());
+
+    btnToggleTable.addEventListener("click", () => {
+        if (tableBox.style.display === "none") {
+            tableBox.style.display = "block";
+            btnToggleTable.textContent = "✓ Buang Jadual";
+            btnToggleTable.classList.remove("btn-primary");
+            btnToggleTable.classList.add("btn-danger");
+            if (rowsArea.children.length === 0) {
+                addCiriTableRow();
+                addCiriTableRow();
+            }
+        } else {
+            tableBox.style.display = "none";
+            btnToggleTable.textContent = "+ Tambah Jadual Contoh";
+            btnToggleTable.classList.remove("btn-danger");
+            btnToggleTable.classList.add("btn-primary");
+        }
+    });
+
+    sectionDiv.querySelector(".btn-remove-section").addEventListener("click", () => sectionDiv.remove());
+    ciriSectionsContainer.appendChild(sectionDiv);
+}
+if(btnTambahCiri) btnTambahCiri.addEventListener("click", () => createCiriSectionInput());
+
+document.addEventListener('focusin', function(e) {
+    if (e.target && e.target.classList.contains('table-input-target')) {
+        lastFocusedTableInput = e.target;
     }
 });
 
-// =========================================================================
-// LOGIK PEMBELAJARAN: BUTANG TERAPUNG KEMBALI KE CARIAN (BAWAH KIRI)
-// =========================================================================
-const btnFloatingSearch = document.getElementById("btnFloatingSearch");
+window.applyTableFormat = function(type, colorValue = null) {
+    if (!lastFocusedTableInput) { alert("Sila klik di dalam mana-mana petak jadual terlebih dahulu."); return; }
+    const input = lastFocusedTableInput;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const originalText = input.value;
+    const selectedText = originalText.substring(start, end);
 
-if (btnFloatingSearch) {
-    btnFloatingSearch.addEventListener("click", () => {
-        if (searchInput) {
-            // 1. Skrol halaman secara lancar ke kotak carian utama
-            searchInput.scrollIntoView({ behavior: "smooth", block: "center" });
-            
-            // 2. Aktifkan kursor menaip di dalam kotak input selepas skrol selesai
-            setTimeout(() => {
-                searchInput.focus();
-                searchInput.select(); // Memilih teks sedia ada untuk carian baru pantas
-            }, 400);
-        }
-    });
+    let tagOpen = "", tagClose = "";
+    switch (type) {
+        case 'b': tagOpen = "<b>"; tagClose = "</b>"; break;
+        case 'u': tagOpen = "<u>"; tagClose = "</u>"; break;
+        case 'i': tagOpen = "<i>"; tagClose = "</i>"; break;
+        case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; break;
+    }
+
+    const modifiedText = tagOpen + selectedText + tagClose;
+    input.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
+    input.focus();
+    input.selectionStart = start;
+    input.selectionEnd = start + modifiedText.length;
+    input.dispatchEvent(new Event('input'));
+};
+
+window.applyFormat = function(textareaId, type, colorValue = null) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const originalText = textarea.value;
+    const selectedText = originalText.substring(start, end);
+
+    let tagOpen = "", tagClose = "", modifiedText = "";
+
+    switch (type) {
+        case 'b': tagOpen = "<b>"; tagClose = "</b>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'u': tagOpen = "<u>"; tagClose = "</u>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'i': tagOpen = "<i>"; tagClose = "</i>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'color': tagOpen = `<span style="color:${colorValue}">`; tagClose = "</span>"; modifiedText = tagOpen + selectedText + tagClose; break;
+        case 'bullet':
+            if (selectedText.trim().length > 0) {
+                const lines = selectedText.split('\n').map(line => line.trim() ? `<li>${line.trim()}</li>` : '').filter(l => l).join(' ');
+                modifiedText = `<ul class="inline-bullet-list">${lines}</ul>`;
+            } else {
+                modifiedText = `<ul class="inline-bullet-list"><li>Teks Senarai</li></ul>`;
+            }
+            break;
+    }
+
+    textarea.value = originalText.substring(0, start) + modifiedText + originalText.substring(end);
+    textarea.value = textarea.value.replace(/<\/ul>([\s\n]*?)<ul>/gi, '$1');
+    textarea.focus();
+    textarea.selectionStart = start;
+    textarea.selectionEnd = start + modifiedText.length;
+    textarea.dispatchEvent(new Event('input'));
+};
+
+async function checkUserSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    updateAdminUI(session);
 }
+
+function updateAdminUI(session) {
+    if (session) {
+        adminAuthBox.style.display = "none";
+        adminDashboardBox.style.display = "block";
+        renderAdminList();
+        renderAdminAyatList();
+    } else {
+        adminAuthBox.style.display = "block";
+        adminDashboardBox.style.display = "none";
+    }
+}
+
+loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value;
+    const password = document.getElementById("loginPassword").value;
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) { alert("Gagal Log Masuk: " + error.message); } 
+    else { updateAdminUI(data.session); }
+});
+
+btnLogKeluar.addEventListener("click", async () => {
+    await supabaseClient.auth.signOut();
+    updateAdminUI(null);
+});
+
+supabaseClient.auth.onAuthStateChange((_event, session) => {
+    updateAdminUI(session);
+});
 
 checkUserSession();
 loadDataFromSupabase();
 renderSearchCard();
+renderSearchAyatCard();
