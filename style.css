@@ -181,26 +181,30 @@ mark.admin-highlight {
     background-color: #cbd5e0;
 }
 
-/* Kesan Lencana apabila ditekan (Aktif) */
+/* =========================================================
+   GAYA BARU: Interaktif Highlight (Satu Warna Keseragaman)
+========================================================= */
+
+/* Kesan Lencana (Badge) apabila ditekan */
 .badge-keyword.active {
-    background-color: #fef08a;
-    color: #b45309;
+    background-color: #fef08a; /* Kuning lembut */
+    color: #b45309; /* Oren gelap */
     border-color: #f59e0b;
     transform: scale(1.05);
 }
 
-/* Gaya perkataan Arab/Melayu yang menyala di paparan Awam */
+/* Gaya asal perkataan menyala (tidak aktif) */
 .public-highlight {
     background-color: transparent;
-    color: inherit; /* KEMASKINI: Paksa teks mewarisi warna asal sekelilingnya */
+    color: inherit;
     transition: all 0.4s ease;
     border-radius: 4px;
     padding: 0 2px;
 }
 
-/* Menyala apabila butang lencana sepadan ditekan */
+/* Perkataan menyala apabila aktif */
 .public-highlight.active {
     background-color: #fef08a;
-    color: #b45309; /* Warna teks oren/coklat apabila menyala */
+    color: #b45309;
     font-weight: bold;
 }
