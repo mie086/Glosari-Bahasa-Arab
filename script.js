@@ -5,10 +5,10 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 // Pembolehubah Global
 let dataIstilah = [];
-let dataAyat = []; // KEMASKINI: Penyimpan data koleksi ayat
+let dataAyat = []; 
 let currentSearch = "";
 let selectedSearchItem = null;
-let selectedAyatItem = null; // KEMASKINI: Penyimpan carian ayat terpilih
+let selectedAyatItem = null; 
 let lastFocusedTableInput = null; 
 
 // DOM Elements: Navigasi
@@ -22,7 +22,7 @@ const suggestionsList = document.getElementById("suggestionsList");
 const resultsList = document.getElementById("resultsList");
 const alphabeticalDirectory = document.getElementById("alphabeticalDirectory");
 
-// DOM Elements: Carian Ayat (BARU)
+// DOM Elements: Carian Ayat
 const searchAyatInput = document.getElementById("searchAyatInput");
 const suggestionsAyatList = document.getElementById("suggestionsAyatList");
 const resultsAyatList = document.getElementById("resultsAyatList");
@@ -52,7 +52,7 @@ const inputCategory = document.getElementById("category");
 const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
 
-// DOM Elements: Admin Pengurusan Ayat (BARU)
+// DOM Elements: Admin Pengurusan Ayat
 const formAyatSection = document.getElementById("formAyatSection");
 const ayatForm = document.getElementById("ayatForm");
 const btnBukaBorangAyat = document.getElementById("btnBukaBorangAyat");
@@ -67,10 +67,10 @@ const jadualAyatWrapper = document.getElementById("jadualAyatWrapper");
 const adminSearchAyatInput = document.getElementById("adminSearchAyatInput");
 const adminTableAyatBody = document.getElementById("adminTableAyatBody");
 
-// Input Borang Ayat
+// KEMASKINI: DOM Elements untuk Visual Editor Borang Ayat
 const inputAyatId = document.getElementById("ayatId");
-const inputAyatAr = document.getElementById("ayatAr");
-const inputTerjemahanMs = document.getElementById("terjemahanMs");
+const ayatArEditor = document.getElementById("ayatArEditor");
+const terjemahanMsEditor = document.getElementById("terjemahanMsEditor");
 const inputKataKunciAyat = document.getElementById("kataKunciAyat");
 
 // =========================================================================
@@ -85,7 +85,6 @@ navButtons.forEach(button => {
         const targetSection = button.getAttribute("data-target");
         document.getElementById(targetSection).classList.add("active");
         
-        // Paparkan butang carian jika di tab Istilah ATAU tab Ayat
         if (targetSection === 'sectionCarian' || targetSection === 'sectionAyat') {
             btnFloatingSearch.style.display = "flex";
         } else {
@@ -101,7 +100,6 @@ navButtons.forEach(button => {
 
 if (btnFloatingSearch) {
     btnFloatingSearch.addEventListener("click", () => {
-        // Semak tab mana yang sedang aktif untuk skrol ke kotak input yang betul
         const isAyatTab = document.getElementById("sectionAyat").classList.contains("active");
         const targetInput = isAyatTab ? searchAyatInput : searchInput;
 
@@ -116,45 +114,45 @@ if (btnFloatingSearch) {
 }
 
 // =========================================================================
-// FUNGSI UTAMA: LOAD DATA DARI SUPABASE (KEMASKINI)
+// FUNGSI UTAMA: LOAD DATA DARI SUPABASE
 // =========================================================================
 async function loadDataFromSupabase() {
-    // 1. Muat turun jadual istilah
     const resIstilah = await supabaseClient
         .from('istilah_arab')
         .select('*')
         .order('title_ms', { ascending: true });
     
-    if (resIstilah.error) {
-        console.error("Ralat memuatkan data istilah:", resIstilah.error.message);
-    } else {
-        dataIstilah = resIstilah.data;
-    }
+    if (resIstilah.error) console.error("Ralat istilah:", resIstilah.error.message);
+    else dataIstilah = resIstilah.data;
 
-    // 2. Muat turun jadual ayat (BARU)
     const resAyat = await supabaseClient
         .from('koleksi_ayat')
         .select('*');
     
-    if (resAyat.error) {
-        console.error("Ralat memuatkan data ayat:", resAyat.error.message);
-    } else {
-        dataAyat = resAyat.data;
-    }
+    if (resAyat.error) console.error("Ralat ayat:", resAyat.error.message);
+    else dataAyat = resAyat.data;
 
-    // Segar semula semua paparan jadual dan direktori
     renderAdminList();
     renderAdminAyatList();
     renderAlphabeticalDirectory();
 }
 
 // =========================================================================
-// PAPARAN AWAM: CARIAN & KAD MAKLUMAT AYAT (BARU)
+// FUNGSI KHAS: MENGALIH KELUAR TAG HTML (UNTUK JADUAL & CARIAN)
+// =========================================================================
+function stripHtml(html) {
+    if (!html) return "";
+    let tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+}
+
+// =========================================================================
+// PAPARAN AWAM: CARIAN & KAD MAKLUMAT AYAT (INTERAKTIF)
 // =========================================================================
 function handleSearchAyatInput(e) {
     const val = e.target.value.trim().toLowerCase();
     
-    // CADANGAN 1: Carian hanya dicetuskan jika user taip lebih dari 2 huruf
     if (val.length < 3) {
         selectedAyatItem = null;
         suggestionsAyatList.style.display = "none";
@@ -163,17 +161,17 @@ function handleSearchAyatInput(e) {
     }
 
     const matches = dataAyat.filter(item => {
+        const plainAr = stripHtml(item.ayat_ar).toLowerCase();
+        const plainMs = stripHtml(item.terjemahan_ms).toLowerCase();
+        
         return (item.kata_kunci && item.kata_kunci.toLowerCase().includes(val)) ||
-               (item.ayat_ar && item.ayat_ar.includes(val)) ||
-               (item.terjemahan_ms && item.terjemahan_ms.toLowerCase().includes(val));
+               plainAr.includes(val) ||
+               plainMs.includes(val);
     });
 
-    // CADANGAN 2: Susun hasil carian supaya perkataan yang paling tepat berada di atas
     matches.sort((a, b) => {
-        const aMs = (a.terjemahan_ms || "").toLowerCase();
-        const bMs = (b.terjemahan_ms || "").toLowerCase();
-        
-        // Jika teks bermula TEPAT dengan apa yang ditaip, letak di atas
+        const aMs = stripHtml(a.terjemahan_ms).toLowerCase();
+        const bMs = stripHtml(b.terjemahan_ms).toLowerCase();
         if (aMs.startsWith(val) && !bMs.startsWith(val)) return -1;
         if (!aMs.startsWith(val) && bMs.startsWith(val)) return 1;
         return 0;
@@ -184,15 +182,29 @@ function handleSearchAyatInput(e) {
         matches.forEach(item => {
             const div = document.createElement("div");
             div.className = "suggestion-item";
+            
+            // KEMASKINI: Logik untuk membina paparan kata kunci yang kemas
+            let keywordsHtml = "";
+            if (item.kata_kunci && item.kata_kunci.trim() !== "") {
+                keywordsHtml = `
+                    <div style="font-size: 0.75rem; color: var(--accent-color); margin-top: 6px; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                        <span>🏷️</span> <span>${item.kata_kunci}</span>
+                    </div>
+                `;
+            }
+
             div.innerHTML = `
-                <div class="suggestion-info">
-                    <span class="suggestion-title">${item.terjemahan_ms.substring(0, 40)}...</span>
+                <div class="suggestion-info" style="display: flex; flex-direction: column; justify-content: center;">
+                    <span class="suggestion-title">${stripHtml(item.terjemahan_ms).substring(0, 40)}...</span>
+                    <!-- Kata Kunci akan muncul di sini (di bawah terjemahan) -->
+                    ${keywordsHtml}
                 </div>
-                <div class="suggestion-arabic">${item.ayat_ar.substring(0, 30)}...</div>
+                <div class="suggestion-arabic">${stripHtml(item.ayat_ar).substring(0, 30)}...</div>
             `;
+            
             div.addEventListener("click", () => {
                 selectedAyatItem = item;
-                searchAyatInput.value = item.kata_kunci ? item.kata_kunci.split(',')[0] : "Carian Ayat";
+                searchAyatInput.value = ""; 
                 suggestionsAyatList.style.display = "none";
                 renderSearchAyatCard();
                 resultsAyatList.scrollIntoView({ behavior: "smooth" });
@@ -218,52 +230,72 @@ function renderSearchAyatCard() {
 
     const card = document.createElement("div");
     card.className = "card";
+    // Memastikan warna latar belakang footer tidak melimpah keluar dari penjuru bulat kad
+    card.style.overflow = "hidden"; 
     
-    // LOGIK BERSIFAT BERSYARAT: Hanya bina lencana jika kata_kunci tidak kosong
-    let kataKunciHtml = "";
+    let displayAyatAr = selectedAyatItem.ayat_ar ? selectedAyatItem.ayat_ar.replace(/admin-highlight/g, "public-highlight") : "";
+    let displayTerjemahan = selectedAyatItem.terjemahan_ms ? selectedAyatItem.terjemahan_ms.replace(/admin-highlight/g, "public-highlight") : "";
+    
+    // SUSUN ATUR UI BARU: Mengasingkan lencana ke dalam kotak "Footer" interaktif
+    let badgesHtml = "";
     if (selectedAyatItem.kata_kunci && selectedAyatItem.kata_kunci.trim() !== "") {
-        kataKunciHtml = `
-            <div style="margin-top: 20px; text-align: left;">
-                <span class="badge" style="background-color: #e2e8f0; color: #4a5568;">
-                    Kata Kunci: ${selectedAyatItem.kata_kunci}
-                </span>
+        const keywordsArr = selectedAyatItem.kata_kunci.split(",").map(k => k.trim()).filter(k => k);
+        badgesHtml = `
+        <div style="background-color: #f8fafc; border-top: 1px solid var(--border-color); padding: 20px; margin: 24px -20px -20px -20px;">
+            <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                Pilih Kata Kunci Untuk Diserlahkan
             </div>
-        `;
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;" class="interactive-badges-container">
+                ${keywordsArr.map(kw => `<span class="badge-keyword" data-target="${kw.toLowerCase()}" style="margin: 0;">${kw}</span>`).join('')}
+            </div>
+        </div>`;
     }
 
     card.innerHTML = `
-        <div class="card-body" style="text-align: center; padding: 10px;">
-            <div style="font-family: var(--font-arabic); font-size: 2.2rem; color: var(--accent-color); direction: rtl; line-height: 1.8; margin-bottom: 24px;">
-                ${selectedAyatItem.ayat_ar}
+        <div class="card-body">
+            <div style="text-align: center; font-family: var(--font-arabic); font-size: 2.2rem; color: var(--accent-color); direction: rtl; line-height: 1.8; margin-bottom: 24px; margin-top: 10px;">
+                ${displayAyatAr}
             </div>
             
-            <div style="border-top: 1px dashed var(--border-color); padding-top: 20px; font-size: 1.15rem; color: #2d3748; line-height: 1.6;">
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 20px; font-size: 1.15rem; color: #2d3748; line-height: 1.6; text-align: center;">
                 <strong>Maksud:</strong><br>
-                ${selectedAyatItem.terjemahan_ms.replace(/\n/g, "<br>")}
+                ${displayTerjemahan}
             </div>
 
-            <!-- Hanya muncul jika ada data kata kunci -->
-            ${kataKunciHtml}
-
-            <div style="margin-top: 36px; text-align: center; border-top: 1px solid var(--border-color); padding-top: 20px;">
-                <button type="button" class="btn btn-primary" id="btnKembaliKeCarianAyat" style="padding: 10px 20px; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 8px;">
-                    🔍 Cari Ayat Lain / Kembali ke Atas
-                </button>
-            </div>
+            <!-- Penambahan Zon Interaktif Kata Kunci -->
+            ${badgesHtml}
         </div>`;
         
     resultsAyatList.appendChild(card);
 
-    const btnKembali = card.querySelector("#btnKembaliKeCarianAyat");
-    if (btnKembali) {
-        btnKembali.addEventListener("click", () => {
-            searchAyatInput.scrollIntoView({ behavior: "smooth", block: "center" });
-            setTimeout(() => { searchAyatInput.focus(); searchAyatInput.select(); }, 400);
+    // LOGIK INTERAKTIF: Apabila lencana ditekan, serlahkan perkataan berkaitan
+    const badgeElements = card.querySelectorAll(".badge-keyword");
+    const highlightElements = card.querySelectorAll(".public-highlight");
+    
+    badgeElements.forEach(badge => {
+        badge.addEventListener("click", () => {
+            const targetKey = badge.getAttribute("data-target");
+            const isActive = badge.classList.contains("active");
+            
+            // Padamkan semua nyalaan terlebih dahulu
+            badgeElements.forEach(b => b.classList.remove("active"));
+            highlightElements.forEach(h => h.classList.remove("active"));
+            
+            // Nyalakan lencana dan perkataan jika ia belum aktif sebelum ini
+            if (!isActive) {
+                badge.classList.add("active");
+                highlightElements.forEach(h => {
+                    if (h.getAttribute("data-key") === targetKey) {
+                        h.classList.add("active");
+                    }
+                });
+            }
         });
-    }
+    });
+
+    // Nota: Kod event listener untuk butang 'Kembali' telah dibuang sepenuhnya.
 }
 
-// Menyembunyikan menu suggestion jika klik di luar
 document.addEventListener("click", (e) => {
     if (!searchInput.contains(e.target) && !suggestionsList.contains(e.target)) {
         suggestionsList.style.display = "none";
@@ -275,16 +307,14 @@ document.addEventListener("click", (e) => {
 
 
 // =========================================================================
-// PANEL ADMIN: KAWALAN PAPARAN JADUAL (ISTILAH VS AYAT)
+// PANEL ADMIN: KAWALAN PAPARAN JADUAL
 // =========================================================================
 btnTabJadualIstilah.addEventListener("click", () => {
     jadualIstilahWrapper.style.display = "block";
     jadualAyatWrapper.style.display = "none";
-    
     btnTabJadualIstilah.classList.replace("btn-secondary", "btn-primary");
     btnTabJadualIstilah.style.backgroundColor = "";
     btnTabJadualIstilah.style.color = "";
-    
     btnTabJadualAyat.classList.replace("btn-primary", "btn-secondary");
     btnTabJadualAyat.style.backgroundColor = "var(--border-color)";
     btnTabJadualAyat.style.color = "var(--text-color)";
@@ -293,20 +323,91 @@ btnTabJadualIstilah.addEventListener("click", () => {
 btnTabJadualAyat.addEventListener("click", () => {
     jadualIstilahWrapper.style.display = "none";
     jadualAyatWrapper.style.display = "block";
-    
     btnTabJadualAyat.classList.replace("btn-secondary", "btn-primary");
     btnTabJadualAyat.style.backgroundColor = "";
     btnTabJadualAyat.style.color = "";
-    
     btnTabJadualIstilah.classList.replace("btn-primary", "btn-secondary");
     btnTabJadualIstilah.style.backgroundColor = "var(--border-color)";
     btnTabJadualIstilah.style.color = "var(--text-color)";
 });
 
+
+// =========================================================================
+// PANEL ADMIN: FUNGSI VISUAL EDITOR (HIGHLIGHT & LINK)
+// =========================================================================
+window.addHighlight = function(editorId) {
+    const editor = document.getElementById(editorId);
+    const selection = window.getSelection();
+    
+    if (!selection.rangeCount || selection.isCollapsed) {
+        alert("Sila highlight (pilih) perkataan terlebih dahulu menggunakan tetikus.");
+        return;
+    }
+    
+    // Pastikan admin highlight di dalam kotak editor yang betul
+    if (!editor.contains(selection.anchorNode)) {
+        alert("Sila pastikan anda highlight perkataan di dalam kotak editor semasa.");
+        return;
+    }
+
+    const keyword = prompt("Masukkan kata kunci untuk pautan perkataan ini (cth: kana, isim nisbah):");
+    if (!keyword || keyword.trim() === "") return;
+
+    // Membalut perkataan yang di-highlight dengan tag HTML <mark>
+    const range = selection.getRangeAt(0);
+    const mark = document.createElement("mark");
+    mark.className = "admin-highlight";
+    mark.setAttribute("data-key", keyword.trim().toLowerCase());
+    mark.textContent = range.toString();
+
+    range.deleteContents();
+    range.insertNode(mark);
+    
+    selection.removeAllRanges(); // Bersihkan kesan highlight asal komputer
+    updateKeywordsList();
+};
+
+window.removeHighlight = function(editorId) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    
+    let node = selection.anchorNode;
+    if (node.nodeType === 3) node = node.parentNode; 
+    
+    if (node.tagName === "MARK" && node.classList.contains("admin-highlight")) {
+        const text = document.createTextNode(node.textContent);
+        node.parentNode.replaceChild(text, node);
+        updateKeywordsList();
+    } else {
+        alert("Sila klik tepat pada perkataan berwarna kuning (highlight) yang ingin dibuang pautannya.");
+    }
+};
+
+function updateKeywordsList() {
+    const marks1 = Array.from(ayatArEditor.querySelectorAll("mark.admin-highlight"));
+    const marks2 = Array.from(terjemahanMsEditor.querySelectorAll("mark.admin-highlight"));
+    const allMarks = [...marks1, ...marks2];
+    
+    const keywords = new Set();
+    allMarks.forEach(m => keywords.add(m.getAttribute("data-key")));
+    
+    inputKataKunciAyat.value = Array.from(keywords).join(", ");
+}
+
+// Pantau setiap kali admin menaip, atau memadam teks
+ayatArEditor.addEventListener('input', updateKeywordsList);
+terjemahanMsEditor.addEventListener('input', updateKeywordsList);
+
+
+// =========================================================================
+// PANEL ADMIN: CRUD KOLEKSI AYAT
+// =========================================================================
 btnBukaBorangAyat.addEventListener("click", () => {
-    closeForm(); // Tutup borang istilah jika terbuka
+    closeForm(); 
     ayatForm.reset();
     inputAyatId.value = "";
+    ayatArEditor.innerHTML = "";
+    terjemahanMsEditor.innerHTML = "";
     formAyatTitle.textContent = "Tambah Koleksi Ayat Baru";
     formAyatSection.classList.add("active");
 });
@@ -316,19 +417,18 @@ function closeFormAyat() {
     formAyatSection.classList.remove("active"); 
     ayatForm.reset(); 
     inputAyatId.value = ""; 
+    ayatArEditor.innerHTML = "";
+    terjemahanMsEditor.innerHTML = "";
 }
 
-// =========================================================================
-// PANEL ADMIN: CRUD KOLEKSI AYAT (BARU)
-// =========================================================================
 function renderAdminAyatList(filterText = "") {
     adminTableAyatBody.innerHTML = "";
     const lowerFilter = filterText.toLowerCase();
 
     const filteredData = dataAyat.filter(item => {
-        return (item.ayat_ar && item.ayat_ar.toLowerCase().includes(lowerFilter)) ||
-               (item.terjemahan_ms && item.terjemahan_ms.toLowerCase().includes(lowerFilter)) ||
-               (item.kata_kunci && item.kata_kunci.toLowerCase().includes(lowerFilter));
+        const plainAr = stripHtml(item.ayat_ar).toLowerCase();
+        const plainMs = stripHtml(item.terjemahan_ms).toLowerCase();
+        return plainAr.includes(lowerFilter) || plainMs.includes(lowerFilter) || (item.kata_kunci && item.kata_kunci.toLowerCase().includes(lowerFilter));
     });
 
     if (filteredData.length === 0) {
@@ -339,9 +439,9 @@ function renderAdminAyatList(filterText = "") {
     filteredData.forEach(item => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td class="td-arabic" style="font-size: 1.1rem;">${item.ayat_ar}</td>
+            <td class="td-arabic" style="font-size: 1.1rem;">${stripHtml(item.ayat_ar)}</td>
             <td>
-                <strong>${item.terjemahan_ms}</strong><br>
+                <strong>${stripHtml(item.terjemahan_ms)}</strong><br>
                 <span style="font-size: 0.75rem; color: var(--text-muted);">Kata kunci: ${item.kata_kunci}</span>
             </td>
             <td>
@@ -360,14 +460,13 @@ if (adminSearchAyatInput) {
     });
 }
 
-// Hantar Data Ayat ke Supabase
 ayatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
-    // Guna UUID sedia ada jika mengemaskini, atau tiada ID (Supabase akan jana baru)
+    // Simpan data HTML (Visual Editor) ke pangkalan data
     const ayatObject = {
-        ayat_ar: inputAyatAr.value.trim(),
-        terjemahan_ms: inputTerjemahanMs.value.trim(),
+        ayat_ar: ayatArEditor.innerHTML.trim(),
+        terjemahan_ms: terjemahanMsEditor.innerHTML.trim(),
         kata_kunci: inputKataKunciAyat.value.trim()
     };
 
@@ -390,23 +489,23 @@ ayatForm.addEventListener("submit", async (e) => {
     }
 });
 
-// Edit Ayat
 window.editAyat = function(id) {
     const item = dataAyat.find(item => item.id === id);
     if (!item) return;
 
-    closeForm(); // Tutup borang istilah
+    closeForm(); 
     formAyatTitle.textContent = "Ubah Koleksi Ayat";
     inputAyatId.value = item.id;
-    inputAyatAr.value = item.ayat_ar;
-    inputTerjemahanMs.value = item.terjemahan_ms;
+    
+    // Kembalikan kod HTML ke dalam editor
+    ayatArEditor.innerHTML = item.ayat_ar || "";
+    terjemahanMsEditor.innerHTML = item.terjemahan_ms || "";
     inputKataKunciAyat.value = item.kata_kunci || "";
     
     formAyatSection.classList.add("active");
     formAyatSection.scrollIntoView({ behavior: "smooth" });
 };
 
-// Padam Ayat
 window.deleteAyat = async function(id) {
     if (confirm("Adakah anda pasti mahu memadam koleksi ayat ini?")) {
         const { error } = await supabaseClient
@@ -838,7 +937,7 @@ window.editItem = function(id) {
     const item = dataIstilah.find(item => item.id === id);
     if (!item) return;
 
-    closeFormAyat(); // Tutup borang ayat jika terbuka
+    closeFormAyat(); 
     formTitle.textContent = "Ubah Maklumat Istilah";
     inputId.value = item.id;
     inputTitleMs.value = item.title_ms;
