@@ -223,27 +223,26 @@ function renderSearchAyatCard() {
     if (!selectedAyatItem) {
         resultsAyatList.innerHTML = `
             <div class="welcome-message">
-                <strong>Koleksi Ayat & Terjemahan</strong><br>Sila taip kata dasar atau kata kunci (Melayu/Arab) di atas untuk memaparkan senarai ayat.
+                <strong>Koleksi Ayat & Terjemahan</strong><br>Sila taip kata dasar atau rujukan tatabahasa di atas untuk memaparkan senarai ayat.
             </div>`;
         return;
     }
 
     const card = document.createElement("div");
     card.className = "card";
-    // Memastikan warna latar belakang footer tidak melimpah keluar dari penjuru bulat kad
     card.style.overflow = "hidden"; 
     
     let displayAyatAr = selectedAyatItem.ayat_ar ? selectedAyatItem.ayat_ar.replace(/admin-highlight/g, "public-highlight") : "";
     let displayTerjemahan = selectedAyatItem.terjemahan_ms ? selectedAyatItem.terjemahan_ms.replace(/admin-highlight/g, "public-highlight") : "";
     
-    // SUSUN ATUR UI BARU: Mengasingkan lencana ke dalam kotak "Footer" interaktif
+    // Bina zon lencana berpusat yang seragam dan kemas
     let badgesHtml = "";
     if (selectedAyatItem.kata_kunci && selectedAyatItem.kata_kunci.trim() !== "") {
         const keywordsArr = selectedAyatItem.kata_kunci.split(",").map(k => k.trim()).filter(k => k);
         badgesHtml = `
         <div style="background-color: #f8fafc; border-top: 1px solid var(--border-color); padding: 20px; margin: 24px -20px -20px -20px;">
             <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                Pilih Kata Kunci Untuk Diserlahkan
+                Kata Kunci (Klik Untuk Serlahkan)
             </div>
             <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;" class="interactive-badges-container">
                 ${keywordsArr.map(kw => `<span class="badge-keyword" data-target="${kw.toLowerCase()}" style="margin: 0;">${kw}</span>`).join('')}
@@ -262,13 +261,12 @@ function renderSearchAyatCard() {
                 ${displayTerjemahan}
             </div>
 
-            <!-- Penambahan Zon Interaktif Kata Kunci -->
             ${badgesHtml}
         </div>`;
         
     resultsAyatList.appendChild(card);
 
-    // LOGIK INTERAKTIF: Apabila lencana ditekan, serlahkan perkataan berkaitan
+    // Logik Interaktif yang disatukan
     const badgeElements = card.querySelectorAll(".badge-keyword");
     const highlightElements = card.querySelectorAll(".public-highlight");
     
@@ -277,11 +275,9 @@ function renderSearchAyatCard() {
             const targetKey = badge.getAttribute("data-target");
             const isActive = badge.classList.contains("active");
             
-            // Padamkan semua nyalaan terlebih dahulu
             badgeElements.forEach(b => b.classList.remove("active"));
             highlightElements.forEach(h => h.classList.remove("active"));
             
-            // Nyalakan lencana dan perkataan jika ia belum aktif sebelum ini
             if (!isActive) {
                 badge.classList.add("active");
                 highlightElements.forEach(h => {
@@ -292,8 +288,6 @@ function renderSearchAyatCard() {
             }
         });
     });
-
-    // Nota: Kod event listener untuk butang 'Kembali' telah dibuang sepenuhnya.
 }
 
 document.addEventListener("click", (e) => {
@@ -333,8 +327,10 @@ btnTabJadualAyat.addEventListener("click", () => {
 
 
 // =========================================================================
-// PANEL ADMIN: FUNGSI VISUAL EDITOR (HIGHLIGHT & LINK)
+// PANEL ADMIN: FUNGSI VISUAL EDITOR (KEMASKINI: MODAL KASTAM)
 // =========================================================================
+let savedSelectionRange = null; // Pembolehubah untuk menyimpan memori highlight
+
 window.addHighlight = function(editorId) {
     const editor = document.getElementById(editorId);
     const selection = window.getSelection();
@@ -344,28 +340,65 @@ window.addHighlight = function(editorId) {
         return;
     }
     
-    // Pastikan admin highlight di dalam kotak editor yang betul
     if (!editor.contains(selection.anchorNode)) {
         alert("Sila pastikan anda highlight perkataan di dalam kotak editor semasa.");
         return;
     }
 
-    const keyword = prompt("Masukkan kata kunci untuk pautan perkataan ini (cth: kana, isim nisbah):");
-    if (!keyword || keyword.trim() === "") return;
+    // SIMPAN kedudukan teks yang di-highlight sebelum modal dibuka
+    savedSelectionRange = selection.getRangeAt(0).cloneRange();
 
-    // Membalut perkataan yang di-highlight dengan tag HTML <mark>
-    const range = selection.getRangeAt(0);
-    const mark = document.createElement("mark");
-    mark.className = "admin-highlight";
-    mark.setAttribute("data-key", keyword.trim().toLowerCase());
-    mark.textContent = range.toString();
-
-    range.deleteContents();
-    range.insertNode(mark);
+    // Buka kotak Pop-up Kastam
+    const modal = document.getElementById("customPromptModal");
+    const input = document.getElementById("customPromptInput");
     
-    selection.removeAllRanges(); // Bersihkan kesan highlight asal komputer
-    updateKeywordsList();
+    input.value = "";
+    modal.style.display = "flex";
+    
+    // Auto-fokus pada kotak taip selepas 0.1 saat
+    setTimeout(() => input.focus(), 100);
 };
+
+// Logik Butang "OK Pautkan"
+document.getElementById("btnCustomPromptOk").addEventListener("click", () => {
+    const input = document.getElementById("customPromptInput");
+    const keyword = input.value;
+
+    if (!keyword || keyword.trim() === "") {
+        alert("Sila masukkan rujukan tatabahasa atau tekan Batal.");
+        return;
+    }
+
+    if (savedSelectionRange) {
+        const mark = document.createElement("mark");
+        mark.className = "admin-highlight";
+        mark.setAttribute("data-key", keyword.trim().toLowerCase());
+        mark.textContent = savedSelectionRange.toString();
+
+        savedSelectionRange.deleteContents();
+        savedSelectionRange.insertNode(mark);
+        
+        window.getSelection().removeAllRanges();
+        savedSelectionRange = null;
+        updateKeywordsList();
+    }
+
+    document.getElementById("customPromptModal").style.display = "none";
+});
+
+// Logik Butang "Batal"
+document.getElementById("btnCustomPromptCancel").addEventListener("click", () => {
+    document.getElementById("customPromptModal").style.display = "none";
+    savedSelectionRange = null; // Buang dari memori
+});
+
+// Logik Pantas: Tekan 'Enter' pada papan kekunci untuk terus pautkan
+document.getElementById("customPromptInput").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        document.getElementById("btnCustomPromptOk").click();
+    }
+});
 
 window.removeHighlight = function(editorId) {
     const selection = window.getSelection();
@@ -389,7 +422,9 @@ function updateKeywordsList() {
     const allMarks = [...marks1, ...marks2];
     
     const keywords = new Set();
-    allMarks.forEach(m => keywords.add(m.getAttribute("data-key")));
+    allMarks.forEach(m => {
+        if (m.getAttribute("data-key")) keywords.add(m.getAttribute("data-key"));
+    });
     
     inputKataKunciAyat.value = Array.from(keywords).join(", ");
 }
