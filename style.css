@@ -127,3 +127,80 @@ th { background-color: #f7fafc; color: var(--primary-color); font-weight: 600; }
 }
 
 @media (min-width: 600px) { body { padding: 24px; } header h1 { font-size: 2.2rem; } .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } }
+
+/* =========================================================
+   GAYA BARU: Visual Editor & Interaktif Highlight
+========================================================= */
+
+/* Tukar div biasa menjadi seperti kotak textarea */
+.content-editor {
+    min-height: 80px;
+    overflow-y: auto;
+    cursor: text;
+    line-height: 1.6;
+    background-color: var(--card-bg);
+}
+
+/* Memaparkan teks 'placeholder' apabila kotak kosong */
+.content-editor[placeholder]:empty:before {
+    content: attr(placeholder);
+    color: #a0aec0;
+    pointer-events: none;
+    display: block;
+}
+
+/* Gaya perkataan yang di-highlight dalam Admin */
+mark.admin-highlight {
+    background-color: #fef08a; /* Kuning lembut */
+    border-radius: 4px;
+    padding: 0 4px;
+    color: #b45309;
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px dashed #f59e0b;
+}
+
+/* Gaya Butang Lencana (Badge) di paparan Awam */
+.badge-keyword {
+    display: inline-block;
+    background-color: #e2e8f0;
+    color: #4a5568;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    user-select: none;
+}
+
+.badge-keyword:hover {
+    background-color: #cbd5e0;
+}
+
+/* Kesan Lencana apabila ditekan (Aktif) */
+.badge-keyword.active {
+    background-color: #fef08a;
+    color: #b45309;
+    border-color: #f59e0b;
+    transform: scale(1.05);
+}
+
+/* Gaya perkataan Arab/Melayu yang menyala di paparan Awam */
+.public-highlight {
+    background-color: transparent;
+    color: inherit; /* KEMASKINI: Paksa teks mewarisi warna asal sekelilingnya */
+    transition: all 0.4s ease;
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+/* Menyala apabila butang lencana sepadan ditekan */
+.public-highlight.active {
+    background-color: #fef08a;
+    color: #b45309; /* Warna teks oren/coklat apabila menyala */
+    font-weight: bold;
+}
