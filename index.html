@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ms">
 <head>
@@ -138,26 +139,37 @@
                     </form>
                 </div>
 
-                <!-- KEMASKINI (BARU): Borang Tambah/Ubah Koleksi Ayat -->
+                <!-- KEMASKINI (BARU): Borang Tambah/Ubah Koleksi Ayat dengan Visual Editor -->
                 <div class="form-section" id="formAyatSection">
                     <h2 id="formAyatTitle">Tambah Koleksi Ayat Baru</h2>
                     <form id="ayatForm">
                         <input type="hidden" id="ayatId">
                         
                         <div class="form-group">
-                            <label for="ayatAr">Ayat Penuh (Bahasa Arab)</label>
-                            <textarea id="ayatAr" class="form-control arabic-input" rows="3" placeholder="Masukkan ayat dalam bahasa arab..." required></textarea>
+                            <label>Ayat Penuh (Bahasa Arab)</label>
+                            <!-- Toolbar Visual Editor Arab -->
+                            <div class="text-toolbar">
+                                <button type="button" class="toolbar-btn" onclick="addHighlight('ayatArEditor')" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
+                                <button type="button" class="toolbar-btn" onclick="removeHighlight('ayatArEditor')" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
+                            </div>
+                            <!-- Pengganti textarea: ContentEditable -->
+                            <div id="ayatArEditor" class="form-control arabic-input content-editor" contenteditable="true" placeholder="Taipkan atau paste ayat bahasa arab di sini..."></div>
                         </div>
 
                         <div class="form-group">
-                            <label for="terjemahanMs">Terjemahan Penuh (Bahasa Melayu)</label>
-                            <textarea id="terjemahanMs" class="form-control" rows="3" placeholder="Masukkan terjemahan ayat..." required></textarea>
+                            <label>Terjemahan Penuh (Bahasa Melayu)</label>
+                            <!-- Toolbar Visual Editor Melayu -->
+                            <div class="text-toolbar">
+                                <button type="button" class="toolbar-btn" onclick="addHighlight('terjemahanMsEditor')" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
+                                <button type="button" class="toolbar-btn" onclick="removeHighlight('terjemahanMsEditor')" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
+                            </div>
+                            <div id="terjemahanMsEditor" class="form-control content-editor" contenteditable="true" placeholder="Taipkan terjemahan ayat di sini..."></div>
                         </div>
 
                         <div class="form-group">
-                            <label for="kataKunciAyat">Kata Kunci Carian (Pilihan)</label>
-                            <input type="text" id="kataKunciAyat" class="form-control" placeholder="cth: jalan, berjalan, مشى, يمشى">
-                            <small style="color: var(--text-muted); font-size: 0.85rem; display: block; margin-top: 4px;">*Pilihan: Masukkan variasi kata dasar (Melayu & Arab) sebagai tambahan carian.</small>
+                            <label for="kataKunciAyat">Senarai Kata Kunci Carian (Dijana Secara Automatik)</label>
+                            <!-- Kotak ini kini ReadOnly. Sistem akan ambil kata kunci secara automatik dari perkataan yang admin highlight -->
+                            <input type="text" id="kataKunciAyat" class="form-control" placeholder="Akan diisi secara automatik apabila anda memautkan perkataan di atas..." readonly style="background-color: #f1f5f9; cursor: not-allowed;">
                         </div>
 
                         <div class="form-actions">
