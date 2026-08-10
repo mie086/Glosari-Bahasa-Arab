@@ -3,6 +3,88 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ============================================================================
+// KESELAMATAN FRONTEND: Sanitization & escaping
+// ============================================================================
+const SAFE_HTML_CONFIG = {
+    ALLOWED_TAGS: [
+        "b", "strong", "i", "em", "u", "span", "br", "ul", "ol", "li",
+        "mark", "div", "table", "thead", "tbody", "tr", "th", "td"
+    ],
+    ALLOWED_ATTR: ["class", "data-key", "style"],
+    FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "svg", "math"],
+    FORBID_ATTR: [
+        "id", "name", "href", "src", "srcset", "action", "formaction", "target",
+        "onerror", "onload", "onclick", "onmouseover", "onfocus", "onmouseenter"
+    ],
+    ALLOW_DATA_ATTR: false
+};
+
+if (typeof DOMPurify === "undefined") {
+    throw new Error("DOMPurify gagal dimuat. Aplikasi dihentikan untuk mengelakkan rendering HTML tidak selamat.");
+}
+
+DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
+    if (data.attrName === "style") {
+        const value = String(data.attrValue || "").trim();
+        const isSafeColor = node.nodeName === "SPAN" &&
+            /^color\s*:\s*(#[0-9a-f]{3,8}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)|rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0|1|0?\.\d+)\s*\))$/i.test(value);
+        if (!isSafeColor) {
+            data.keepAttr = false;
+        } else {
+            data.attrValue = value;
+        }
+    }
+});
+
+const ESCAPED_RICH_TAG_RE = /&lt;\s*\/?\s*(?:b|strong|i|em|u|span|br|ul|ol|li|mark|div|table|thead|tbody|tr|th|td)\b[^&]*?&gt;/i;
+
+function decodeEscapedRichHtml(value) {
+    let result = String(value ?? "");
+
+    // Sesetengah rekod lama mungkin telah disimpan sebagai HTML-escaped
+    // (contoh: &lt;ul&gt;...&lt;/ul&gt;). Kita hanya decode apabila kandungan
+    // benar-benar kelihatan seperti rich-text yang di-escape, kemudian
+    // sanitize semula. Ini mengelakkan plain text biasa daripada ditukar.
+    for (let i = 0; i < 2 && ESCAPED_RICH_TAG_RE.test(result); i++) {
+        const decoded = result
+            .replace(/&lt;/gi, "<")
+            .replace(/&gt;/gi, ">")
+            .replace(/&quot;/gi, '"')
+            .replace(/&#0*39;/gi, "'")
+            .replace(/&#x0*27;/gi, "'")
+            .replace(/&amp;/gi, "&");
+
+        if (decoded === result) break;
+        result = decoded;
+    }
+
+    return result;
+}
+
+function sanitizeHtml(html) {
+    const normalized = decodeEscapedRichHtml(html);
+    return DOMPurify.sanitize(normalized, SAFE_HTML_CONFIG);
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function escapeAttr(value) {
+    return escapeHtml(value);
+}
+
+function sanitizeEditorHtml(html) {
+    return sanitizeHtml(html);
+}
+
+
 // Pembolehubah Global
 let dataIstilah = [];
 let dataAyat = []; 
@@ -143,7 +225,7 @@ async function loadDataFromSupabase() {
 function stripHtml(html) {
     if (!html) return "";
     let tmp = document.createElement("DIV");
-    tmp.innerHTML = html;
+    tmp.innerHTML = sanitizeHtml(html);
     return tmp.textContent || tmp.innerText || "";
 }
 
@@ -188,18 +270,18 @@ function handleSearchAyatInput(e) {
             if (item.kata_kunci && item.kata_kunci.trim() !== "") {
                 keywordsHtml = `
                     <div style="font-size: 0.75rem; color: var(--accent-color); margin-top: 6px; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                        <span>🏷️</span> <span>${item.kata_kunci}</span>
+                        <span>🏷️</span> <span>${escapeHtml(item.kata_kunci)}</span>
                     </div>
                 `;
             }
 
             div.innerHTML = `
                 <div class="suggestion-info" style="display: flex; flex-direction: column; justify-content: center;">
-                    <span class="suggestion-title">${stripHtml(item.terjemahan_ms).substring(0, 40)}...</span>
+                    <span class="suggestion-title">${escapeHtml(stripHtml(item.terjemahan_ms).substring(0, 40))}...</span>
                     <!-- Kata Kunci akan muncul di sini (di bawah terjemahan) -->
                     ${keywordsHtml}
                 </div>
-                <div class="suggestion-arabic">${stripHtml(item.ayat_ar).substring(0, 30)}...</div>
+                <div class="suggestion-arabic">${escapeHtml(stripHtml(item.ayat_ar).substring(0, 30))}...</div>
             `;
             
             div.addEventListener("click", () => {
@@ -232,8 +314,8 @@ function renderSearchAyatCard() {
     card.className = "card";
     card.style.overflow = "hidden"; 
     
-    let displayAyatAr = selectedAyatItem.ayat_ar ? selectedAyatItem.ayat_ar.replace(/admin-highlight/g, "public-highlight") : "";
-    let displayTerjemahan = selectedAyatItem.terjemahan_ms ? selectedAyatItem.terjemahan_ms.replace(/admin-highlight/g, "public-highlight") : "";
+    let displayAyatAr = selectedAyatItem.ayat_ar ? sanitizeHtml(selectedAyatItem.ayat_ar).replace(/admin-highlight/g, "public-highlight") : "";
+    let displayTerjemahan = selectedAyatItem.terjemahan_ms ? sanitizeHtml(selectedAyatItem.terjemahan_ms).replace(/admin-highlight/g, "public-highlight") : "";
     
     // Bina zon lencana berpusat yang seragam dan kemas
     let badgesHtml = "";
@@ -245,7 +327,7 @@ function renderSearchAyatCard() {
                 Kata Kunci (Klik Untuk Serlahkan)
             </div>
             <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;" class="interactive-badges-container">
-                ${keywordsArr.map(kw => `<span class="badge-keyword" data-target="${kw.toLowerCase()}" style="margin: 0;">${kw}</span>`).join('')}
+                ${keywordsArr.map(kw => `<span class="badge-keyword" data-target="${escapeAttr(kw.toLowerCase())}" style="margin: 0;">${escapeHtml(kw)}</span>`).join('')}
             </div>
         </div>`;
     }
@@ -331,7 +413,7 @@ btnTabJadualAyat.addEventListener("click", () => {
 // =========================================================================
 let savedSelectionRange = null; // Pembolehubah untuk menyimpan memori highlight
 
-window.addHighlight = function(editorId) {
+function addHighlight(editorId) {
     const editor = document.getElementById(editorId);
     const selection = window.getSelection();
     
@@ -400,7 +482,7 @@ document.getElementById("customPromptInput").addEventListener("keypress", (e) =>
     }
 });
 
-window.removeHighlight = function(editorId) {
+function removeHighlight(editorId) {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
@@ -474,15 +556,15 @@ function renderAdminAyatList(filterText = "") {
     filteredData.forEach(item => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td class="td-arabic" style="font-size: 1.1rem;">${stripHtml(item.ayat_ar)}</td>
+            <td class="td-arabic" style="font-size: 1.1rem;">${escapeHtml(stripHtml(item.ayat_ar))}</td>
             <td>
-                <strong>${stripHtml(item.terjemahan_ms)}</strong><br>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">Kata kunci: ${item.kata_kunci}</span>
+                <strong>${escapeHtml(stripHtml(item.terjemahan_ms))}</strong><br>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Kata kunci: ${escapeHtml(item.kata_kunci)}</span>
             </td>
             <td>
                 <div class="actions-cell" style="display:flex; gap:6px;">
-                    <button class="btn btn-edit" onclick="editAyat('${item.id}')">Ubah</button>
-                    <button class="btn btn-danger" onclick="deleteAyat('${item.id}')">Padam</button>
+                    <button class="btn btn-edit" type="button" data-action="edit-ayat" data-id="${escapeAttr(item.id)}">Ubah</button>
+                    <button class="btn btn-danger" type="button" data-action="delete-ayat" data-id="${escapeAttr(item.id)}">Padam</button>
                 </div>
             </td>`;
         adminTableAyatBody.appendChild(tr);
@@ -495,13 +577,27 @@ if (adminSearchAyatInput) {
     });
 }
 
+document.addEventListener("click", (e) => {
+    const button = e.target.closest("button[data-action]");
+    if (!button) return;
+    const id = button.getAttribute("data-id");
+    if (!id) return;
+
+    switch (button.getAttribute("data-action")) {
+        case "edit-ayat": editAyat(id); break;
+        case "delete-ayat": deleteAyat(id); break;
+        case "edit-item": editItem(id); break;
+        case "delete-item": deleteItem(id); break;
+    }
+});
+
 ayatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
     // Simpan data HTML (Visual Editor) ke pangkalan data
     const ayatObject = {
-        ayat_ar: ayatArEditor.innerHTML.trim(),
-        terjemahan_ms: terjemahanMsEditor.innerHTML.trim(),
+        ayat_ar: sanitizeEditorHtml(ayatArEditor.innerHTML.trim()),
+        terjemahan_ms: sanitizeEditorHtml(terjemahanMsEditor.innerHTML.trim()),
         kata_kunci: inputKataKunciAyat.value.trim()
     };
 
@@ -524,7 +620,7 @@ ayatForm.addEventListener("submit", async (e) => {
     }
 });
 
-window.editAyat = function(id) {
+function editAyat(id) {
     const item = dataAyat.find(item => item.id === id);
     if (!item) return;
 
@@ -533,15 +629,15 @@ window.editAyat = function(id) {
     inputAyatId.value = item.id;
     
     // Kembalikan kod HTML ke dalam editor
-    ayatArEditor.innerHTML = item.ayat_ar || "";
-    terjemahanMsEditor.innerHTML = item.terjemahan_ms || "";
+    ayatArEditor.innerHTML = sanitizeEditorHtml(item.ayat_ar || "");
+    terjemahanMsEditor.innerHTML = sanitizeEditorHtml(item.terjemahan_ms || "");
     inputKataKunciAyat.value = item.kata_kunci || "";
     
     formAyatSection.classList.add("active");
     formAyatSection.scrollIntoView({ behavior: "smooth" });
 };
 
-window.deleteAyat = async function(id) {
+async function deleteAyat(id) {
     if (confirm("Adakah anda pasti mahu memadam koleksi ayat ini?")) {
         const { error } = await supabaseClient
             .from('koleksi_ayat')
@@ -602,9 +698,9 @@ function renderAlphabeticalDirectory() {
             </div>
             <div class="dir-letter-content">
                 ${groups[letter].map(item => `
-                    <div class="dir-item" data-id="${item.id}">
-                        <span>${item.title_ms}</span>
-                        <span class="dir-item-ar">${item.title_ar || ""}</span>
+                    <div class="dir-item" data-id="${escapeAttr(item.id)}">
+                        <span>${escapeHtml(item.title_ms)}</span>
+                        <span class="dir-item-ar">${escapeHtml(item.title_ar || "")}</span>
                     </div>
                 `).join("")}
             </div>
@@ -666,10 +762,10 @@ function handleSearchInput(e) {
             div.className = "suggestion-item";
             div.innerHTML = `
                 <div class="suggestion-info">
-                    <span class="suggestion-title">${item.title_ms}</span>
-                    <span class="suggestion-cat">${item.category ? item.category : 'Tiada Kategori'}</span>
+                    <span class="suggestion-title">${escapeHtml(item.title_ms)}</span>
+                    <span class="suggestion-cat">${escapeHtml(item.category ? item.category : 'Tiada Kategori')}</span>
                 </div>
-                <div class="suggestion-arabic">${item.title_ar}</div>
+                <div class="suggestion-arabic">${escapeHtml(item.title_ar)}</div>
             `;
             div.addEventListener("click", () => {
                 selectedSearchItem = item;
@@ -707,17 +803,17 @@ function renderSearchCard() {
                 if (c.startsWith('{') && c.endsWith('}')) {
                     const parsed = JSON.parse(c);
                     if (parsed.mainTitle) {
-                        formattedCharacteristics += `<div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;"><span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${parsed.mainTitle}</span></div>`;
+                        formattedCharacteristics += `<div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;"><span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${escapeHtml(parsed.mainTitle)}</span></div>`;
                     }
                     if (parsed.subTitle) {
-                        formattedCharacteristics += `<div style="margin-top: 12px; margin-bottom: 8px; font-size: 1.05rem; font-weight: bold; color: var(--primary-color);">${parsed.subTitle}:</div>`;
+                        formattedCharacteristics += `<div style="margin-top: 12px; margin-bottom: 8px; font-size: 1.05rem; font-weight: bold; color: var(--primary-color);">${escapeHtml(parsed.subTitle)}:</div>`;
                     }
                     if (parsed.content) {
-                        formattedCharacteristics += `<div class="definition" style="margin-bottom: 16px; line-height: 1.6;">${parsed.content.replace(/\n/g, "<br>")}</div>`;
+                        formattedCharacteristics += `<div class="definition" style="margin-bottom: 16px; line-height: 1.6;">${sanitizeHtml(parsed.content).replace(/\n/g, "<br>")}</div>`;
                     }
                     
                     if (parsed.table_data && parsed.table_data.headers && parsed.table_data.rows && parsed.table_data.rows.length > 0) {
-                        const tTitle = parsed.table_data.table_title ? parsed.table_data.table_title.trim() : "";
+                        const tTitle = parsed.table_data.table_title ? String(parsed.table_data.table_title).trim() : "";
                         const tHeaders = parsed.table_data.headers || [];
                         const tRows = parsed.table_data.rows || [];
 
@@ -728,13 +824,13 @@ function renderSearchCard() {
                             hasColumn4 = tRows.some(row => row[3] && row[3].trim() !== "");
                         }
 
-                        let th4Html = hasColumn4 ? `<th style="text-align: center;">${tHeaders[3] || ""}</th>` : "";
+                        let th4Html = hasColumn4 ? `<th style="text-align: center;">${sanitizeHtml(tHeaders[3] || "")}</th>` : "";
 
                         let titleHtml = "";
                         if (tTitle !== "") {
                             titleHtml = `
                             <div style="margin-top: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 12px;">
-                                <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">${tTitle}</span>
+                                <span style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">${escapeHtml(tTitle)}</span>
                             </div>`;
                         }
 
@@ -744,20 +840,20 @@ function renderSearchCard() {
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>${tHeaders[0] || ""}</th>
-                                            <th style="text-align: center;">${tHeaders[1] || ""}</th>
-                                            <th style="text-align: center;">${tHeaders[2] || ""}</th>
+                                            <th>${sanitizeHtml(tHeaders[0] || "")}</th>
+                                            <th style="text-align: center;">${sanitizeHtml(tHeaders[1] || "")}</th>
+                                            <th style="text-align: center;">${sanitizeHtml(tHeaders[2] || "")}</th>
                                             ${th4Html}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         ${tRows.map(row => {
-                                            let td4Html = hasColumn4 ? `<td style="text-align: center;">${row[3] || ""}</td>` : "";
+                                            let td4Html = hasColumn4 ? `<td style="text-align: center;">${sanitizeHtml(row[3] || "")}</td>` : "";
                                             return `
                                                 <tr>
-                                                    <td>${row[0] || ""}</td>
-                                                    <td style="text-align: center;">${row[1] || ""}</td>
-                                                    <td style="text-align: center;">${row[2] || ""}</td>
+                                                    <td>${sanitizeHtml(row[0] || "")}</td>
+                                                    <td style="text-align: center;">${sanitizeHtml(row[1] || "")}</td>
+                                                    <td style="text-align: center;">${sanitizeHtml(row[2] || "")}</td>
                                                     ${td4Html}
                                                 </tr>
                                             `;
@@ -768,17 +864,17 @@ function renderSearchCard() {
                         `;
                     }
                 } else {
-                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${c.replace(/\n/g, "<br>")}</div>`;
+                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
                 }
             } catch (e) {
-                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${c.replace(/\n/g, "<br>")}</div>`;
+                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
             }
         });
     }
 
     let legacyStandaloneTableHtml = "";
     if (selectedSearchItem.table_data && selectedSearchItem.table_data.headers && selectedSearchItem.table_data.rows && selectedSearchItem.table_data.rows.length > 0) {
-        const tableTitle = selectedSearchItem.table_data.table_title ? selectedSearchItem.table_data.table_title.trim() : "";
+        const tableTitle = selectedSearchItem.table_data.table_title ? String(selectedSearchItem.table_data.table_title).trim() : "";
         const tHeadersLegacy = selectedSearchItem.table_data.headers || [];
         const tRowsLegacy = selectedSearchItem.table_data.rows || [];
 
@@ -789,13 +885,13 @@ function renderSearchCard() {
             hasColumn4Legacy = tRowsLegacy.some(row => row[3] && row[3].trim() !== "");
         }
 
-        let th4LegacyHtml = hasColumn4Legacy ? `<th style="text-align: center;">${tHeadersLegacy[3] || ""}</th>` : "";
+        let th4LegacyHtml = hasColumn4Legacy ? `<th style="text-align: center;">${sanitizeHtml(tHeadersLegacy[3] || "")}</th>` : "";
 
         let legacyTitleHtml = "";
         if (tableTitle !== "") {
             legacyTitleHtml = `
             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
-                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${tableTitle}</span>
+                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${escapeHtml(tableTitle)}</span>
             </div>`;
         }
 
@@ -805,20 +901,20 @@ function renderSearchCard() {
                 <table>
                     <thead>
                         <tr>
-                            <th>${tHeadersLegacy[0] || ""}</th>
-                            <th style="text-align: center;">${tHeadersLegacy[1] || ""}</th>
-                            <th style="text-align: center;">${tHeadersLegacy[2] || ""}</th>
+                            <th>${sanitizeHtml(tHeadersLegacy[0] || "")}</th>
+                            <th style="text-align: center;">${sanitizeHtml(tHeadersLegacy[1] || "")}</th>
+                            <th style="text-align: center;">${sanitizeHtml(tHeadersLegacy[2] || "")}</th>
                             ${th4LegacyHtml}
                         </tr>
                     </thead>
                     <tbody>
                         ${tRowsLegacy.map(row => {
-                            let td4LegacyHtml = hasColumn4Legacy ? `<td style="text-align: center;">${row[3] || ""}</td>` : "";
+                            let td4LegacyHtml = hasColumn4Legacy ? `<td style="text-align: center;">${sanitizeHtml(row[3] || "")}</td>` : "";
                             return `
                                 <tr>
-                                    <td>${row[0] || ""}</td>
-                                    <td style="text-align: center;">${row[1] || ""}</td>
-                                    <td style="text-align: center;">${row[2] || ""}</td>
+                                    <td>${sanitizeHtml(row[0] || "")}</td>
+                                    <td style="text-align: center;">${sanitizeHtml(row[1] || "")}</td>
+                                    <td style="text-align: center;">${sanitizeHtml(row[2] || "")}</td>
                                     ${td4LegacyHtml}
                                 </tr>
                             `;
@@ -828,17 +924,17 @@ function renderSearchCard() {
             </div>`;
     }
 
-    let formattedDefinition = selectedSearchItem.definition 
-        ? selectedSearchItem.definition.replace(/\n/g, "<br>") 
+    let formattedDefinition = selectedSearchItem.definition
+        ? sanitizeHtml(selectedSearchItem.definition).replace(/\n/g, "<br>")
         : "";
 
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title-group">
-                <div class="title-ms">${selectedSearchItem.title_ms}</div>
-                ${selectedSearchItem.category ? `<span class="category-badge">${selectedSearchItem.category}</span>` : ''}
+                <div class="title-ms">${escapeHtml(selectedSearchItem.title_ms)}</div>
+                ${selectedSearchItem.category ? `<span class="category-badge">${escapeHtml(selectedSearchItem.category)}</span>` : ''}
             </div>
-            <div class="title-ar">${selectedSearchItem.title_ar}</div>
+            <div class="title-ar">${escapeHtml(selectedSearchItem.title_ar)}</div>
         </div>
         <div class="card-body">
             <div class="definition">${formattedDefinition}</div>
@@ -882,13 +978,13 @@ function renderAdminList(filterText = "") {
     filteredData.forEach(item => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td><strong>${item.title_ms}</strong></td>
-            <td class="td-arabic">${item.title_ar}</td>
-            <td><span class="badge">${item.category ? item.category : 'Kosong'}</span></td>
+            <td><strong>${escapeHtml(item.title_ms)}</strong></td>
+            <td class="td-arabic">${escapeHtml(item.title_ar)}</td>
+            <td><span class="badge">${escapeHtml(item.category ? item.category : 'Kosong')}</span></td>
             <td>
                 <div class="actions-cell">
-                    <button class="btn btn-edit" onclick="editItem('${item.id}')">Ubah</button>
-                    <button class="btn btn-danger" onclick="deleteItem('${item.id}')">Padam</button>
+                    <button class="btn btn-edit" type="button" data-action="edit-item" data-id="${escapeAttr(item.id)}">Ubah</button>
+                    <button class="btn btn-danger" type="button" data-action="delete-item" data-id="${escapeAttr(item.id)}">Padam</button>
                 </div>
             </td>`;
         adminTableBody.appendChild(tr);
@@ -919,18 +1015,18 @@ termForm.addEventListener("submit", async (e) => {
         let embeddedTableObj = null;
         if (tableBox && tableBox.style.display !== "none") {
             const tTitle = tableBox.querySelector(".ciri-table-title").value.trim();
-            const h1 = tableBox.querySelector(".th-1").value.trim();
-            const h2 = tableBox.querySelector(".th-2").value.trim();
-            const h3 = tableBox.querySelector(".th-3").value.trim();
-            const h4 = tableBox.querySelector(".th-4").value.trim();
+            const h1 = sanitizeEditorHtml(tableBox.querySelector(".th-1").value.trim());
+            const h2 = sanitizeEditorHtml(tableBox.querySelector(".th-2").value.trim());
+            const h3 = sanitizeEditorHtml(tableBox.querySelector(".th-3").value.trim());
+            const h4 = sanitizeEditorHtml(tableBox.querySelector(".th-4").value.trim());
             
             const rItems = tableBox.querySelectorAll(".builder-row-item");
             const rowsData = [];
             rItems.forEach(row => {
-                const v1 = row.querySelector(".col-1").value.trim();
-                const v2 = row.querySelector(".col-2").value.trim();
-                const v3 = row.querySelector(".col-3").value.trim();
-                const v4 = row.querySelector(".col-4").value.trim();
+                const v1 = sanitizeEditorHtml(row.querySelector(".col-1").value.trim());
+                const v2 = sanitizeEditorHtml(row.querySelector(".col-2").value.trim());
+                const v3 = sanitizeEditorHtml(row.querySelector(".col-3").value.trim());
+                const v4 = sanitizeEditorHtml(row.querySelector(".col-4").value.trim());
                 if (v1 || v2 || v3 || v4) rowsData.push([v1, v2, v3, v4]);
             });
             
@@ -940,7 +1036,7 @@ termForm.addEventListener("submit", async (e) => {
         }
 
         if (mTitle || sTitle || content || embeddedTableObj) {
-            chrArray.push(JSON.stringify({ mainTitle: mTitle, subTitle: sTitle, content: content, table_data: embeddedTableObj }));
+            chrArray.push(JSON.stringify({ mainTitle: mTitle, subTitle: sTitle, content: sanitizeEditorHtml(content), table_data: embeddedTableObj }));
         }
     });
 
@@ -949,7 +1045,7 @@ termForm.addEventListener("submit", async (e) => {
         title_ms: inputTitleMs.value,
         title_ar: inputTitleAr.value,
         category: inputCategory.value,
-        definition: inputDefinition.value,
+        definition: sanitizeEditorHtml(inputDefinition.value),
         characteristics: chrArray,
         table_data: null, 
         keywords: kwArray
@@ -968,7 +1064,7 @@ termForm.addEventListener("submit", async (e) => {
     }
 });
 
-window.editItem = function(id) {
+function editItem(id) {
     const item = dataIstilah.find(item => item.id === id);
     if (!item) return;
 
@@ -1013,7 +1109,7 @@ window.editItem = function(id) {
     formSection.scrollIntoView({ behavior: "smooth" });
 };
 
-window.deleteItem = async function(id) {
+async function deleteItem(id) {
     if (confirm("Adakah anda pasti mahu memadam istilah ini dari pangkalan data cloud?")) {
         const { error } = await supabaseClient.from('istilah_arab').delete().eq('id', id);
 
@@ -1070,24 +1166,24 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
         
         <div class="form-group" style="margin-top: 4px; margin-right: 40px;">
             <label>Tajuk Besar (Pilihan)</label>
-            <input type="text" class="form-control ciri-main-title-input" placeholder="Contoh: Baris akhir berubah" value="${mainTitleVal}">
+            <input type="text" class="form-control ciri-main-title-input" placeholder="Contoh: Baris akhir berubah" value="${escapeAttr(mainTitleVal)}">
         </div>
 
         <div class="form-group" style="margin-top: 4px;">
             <label>Subtajuk (Pilihan)</label>
-            <input type="text" class="form-control ciri-sub-title-input" placeholder="Contoh: Rafa' / Nasab / Jar" value="${subTitleVal}">
+            <input type="text" class="form-control ciri-sub-title-input" placeholder="Contoh: Rafa' / Nasab / Jar" value="${escapeAttr(subTitleVal)}">
         </div>
         
         <div class="form-group" style="margin-bottom:12px;">
             <label>Penerangan</label>
             <div class="text-toolbar">
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'b')">B</button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'u')"><u>U</u></button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'i')"><i>I</i></button>
-                <button type="button" class="toolbar-btn" onclick="applyFormat('${uniqueId}', 'bullet')">• Senarai</button>
-                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('${uniqueId}', 'color', this.value)"></div>
+                <button type="button" class="toolbar-btn" data-format-target="${uniqueId}" data-format="b">B</button>
+                <button type="button" class="toolbar-btn" data-format-target="${uniqueId}" data-format="u"><u>U</u></button>
+                <button type="button" class="toolbar-btn" data-format-target="${uniqueId}" data-format="i"><i>I</i></button>
+                <button type="button" class="toolbar-btn" data-format-target="${uniqueId}" data-format="bullet">• Senarai</button>
+                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" data-format-target="${uniqueId}" data-format="color"></div>
             </div>
-            <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${contentVal}</textarea>
+            <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${escapeHtml(contentVal)}</textarea>
         </div>
 
         <button type="button" class="btn ${btnToggleClass} btn-toggle-table" style="padding: 4px 10px; font-size: 0.8rem; margin-bottom: 4px;">${btnToggleText}</button>
@@ -1095,20 +1191,20 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
         <div class="ciri-table-builder" id="${tableContainerId}" style="display: ${isTableVisible}; background: #f7fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 8px;">
             <div class="form-group" style="margin-bottom: 8px;">
                 <label style="font-size: 0.85rem; color: var(--accent-color); font-weight: 600;">Tajuk Jadual (Pilihan)</label>
-                <input type="text" class="form-control ciri-table-title" placeholder="Contoh: Contoh Tasrif / Struktur" value="${tTitle}">
+                <input type="text" class="form-control ciri-table-title" placeholder="Contoh: Contoh Tasrif / Struktur" value="${escapeAttr(tTitle)}">
             </div>
             
             <div class="text-toolbar" style="margin-bottom: 8px; width: 100%;">
-                <button type="button" class="toolbar-btn" onclick="applyTableFormat('b')" title="Tebal">B</button>
-                <button type="button" class="toolbar-btn" onclick="applyTableFormat('u')" title="Garis Bawah"><u>U</u></button>
-                <button type="button" class="toolbar-btn" onclick="applyTableFormat('i')" title="Senget"><i>I</i></button>
+                <button type="button" class="toolbar-btn" data-table-format="b" title="Tebal">B</button>
+                <button type="button" class="toolbar-btn" data-table-format="u" title="Garis Bawah"><u>U</u></button>
+                <button type="button" class="toolbar-btn" data-table-format="i" title="Senget"><i>I</i></button>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px;">
-                <input type="text" class="form-control th-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 1" value="${th1_val}">
-                <input type="text" class="form-control th-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 2" value="${th2_val}">
-                <input type="text" class="form-control th-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 3" value="${th3_val}">
-                <input type="text" class="form-control th-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 4" value="${th4_val}">
+                <input type="text" class="form-control th-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 1" value="${escapeAttr(th1_val)}">
+                <input type="text" class="form-control th-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 2" value="${escapeAttr(th2_val)}">
+                <input type="text" class="form-control th-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 3" value="${escapeAttr(th3_val)}">
+                <input type="text" class="form-control th-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Header 4" value="${escapeAttr(th4_val)}">
             </div>
 
             <div class="ciri-rows-area" id="${rowsContainerId}" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;"></div>
@@ -1126,10 +1222,10 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
         rowDiv.className = "builder-row-item";
         rowDiv.style = "display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 6px; align-items: center;";
         rowDiv.innerHTML = `
-            <input type="text" class="form-control col-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 1" value="${v1}">
-            <input type="text" class="form-control col-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 2" value="${v2}">
-            <input type="text" class="form-control col-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 3" value="${v3}">
-            <input type="text" class="form-control col-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 4" value="${v4}">
+            <input type="text" class="form-control col-1 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 1" value="${escapeAttr(v1)}">
+            <input type="text" class="form-control col-2 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 2" value="${escapeAttr(v2)}">
+            <input type="text" class="form-control col-3 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 3" value="${escapeAttr(v3)}">
+            <input type="text" class="form-control col-4 table-input-target" style="padding:6px; font-size:0.85rem;" placeholder="Lajur 4" value="${escapeAttr(v4)}">
             <button type="button" class="btn btn-danger btn-remove-row" style="padding: 4px 8px; font-size:0.75rem;">X</button>
         `;
         rowDiv.querySelector(".btn-remove-row").addEventListener("click", () => rowDiv.remove());
@@ -1171,7 +1267,36 @@ document.addEventListener('focusin', function(e) {
     }
 });
 
-window.applyTableFormat = function(type, colorValue = null) {
+document.addEventListener("click", (e) => {
+    const button = e.target.closest("button[data-format-target]");
+    if (!button) return;
+    const targetId = button.getAttribute("data-format-target");
+    const type = button.getAttribute("data-format");
+    if (targetId && type) applyFormat(targetId, type);
+});
+
+document.addEventListener("change", (e) => {
+    const input = e.target.closest("input[data-format-target][data-format=\"color\"]");
+    if (!input) return;
+    applyFormat(input.getAttribute("data-format-target"), "color", input.value);
+});
+
+document.addEventListener("click", (e) => {
+    const button = e.target.closest("button[data-table-format]");
+    if (!button) return;
+    applyTableFormat(button.getAttribute("data-table-format"));
+});
+
+document.addEventListener("click", (e) => {
+    const button = e.target.closest("button[data-highlight-target][data-highlight-action]");
+    if (!button) return;
+    const targetId = button.getAttribute("data-highlight-target");
+    if (button.getAttribute("data-highlight-action") === "add") addHighlight(targetId);
+    if (button.getAttribute("data-highlight-action") === "remove") removeHighlight(targetId);
+});
+
+function applyTableFormat(type, colorValue = null) {
+    if (type === "color" && !/^#[0-9a-f]{6}$/i.test(String(colorValue || ""))) return;
     if (!lastFocusedTableInput) { alert("Sila klik di dalam mana-mana petak jadual terlebih dahulu."); return; }
     const input = lastFocusedTableInput;
     const start = input.selectionStart;
@@ -1195,7 +1320,8 @@ window.applyTableFormat = function(type, colorValue = null) {
     input.dispatchEvent(new Event('input'));
 };
 
-window.applyFormat = function(textareaId, type, colorValue = null) {
+function applyFormat(textareaId, type, colorValue = null) {
+    if (type === "color" && !/^#[0-9a-f]{6}$/i.test(String(colorValue || ""))) return;
     const textarea = document.getElementById(textareaId);
     if (!textarea) return;
 
