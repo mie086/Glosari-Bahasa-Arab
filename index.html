@@ -1,13 +1,15 @@
-
 <!DOCTYPE html>
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ejivaczazdimurhtlmsj.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <title>Sistem Istilah Bahasa Arab</title>
     
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js"></script>
 </head>
 <body>
 
@@ -118,11 +120,11 @@
                         <div class="form-group">
                             <label for="definition">Definisi / Penerangan</label>
                             <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'b')">B</button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'u')"><u>U</u></button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'i')"><i>I</i></button>
-                                <button type="button" class="toolbar-btn" onclick="applyFormat('definition', 'bullet')">• Senarai</button>
-                                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" onchange="applyFormat('definition', 'color', this.value)"></div>
+                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="b">B</button>
+                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="u"><u>U</u></button>
+                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="i"><i>I</i></button>
+                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="bullet">• Senarai</button>
+                                <div class="color-picker-wrapper"><input type="color" class="toolbar-color" data-format-target="definition" data-format="color"></div>
                             </div>
                             <textarea id="definition" class="form-control" rows="3" placeholder="Masukkan maksud istilah..." required></textarea>
                         </div>
@@ -149,8 +151,8 @@
                             <label>Ayat Penuh (Bahasa Arab)</label>
                             <!-- Toolbar Visual Editor Arab -->
                             <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" onclick="addHighlight('ayatArEditor')" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
-                                <button type="button" class="toolbar-btn" onclick="removeHighlight('ayatArEditor')" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
+                                <button type="button" class="toolbar-btn" data-highlight-target="ayatArEditor" data-highlight-action="add" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
+                                <button type="button" class="toolbar-btn" data-highlight-target="ayatArEditor" data-highlight-action="remove" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
                             </div>
                             <!-- Pengganti textarea: ContentEditable -->
                             <div id="ayatArEditor" class="form-control arabic-input content-editor" contenteditable="true" placeholder="Taipkan atau paste ayat bahasa arab di sini..."></div>
@@ -160,8 +162,8 @@
                             <label>Terjemahan Penuh (Bahasa Melayu)</label>
                             <!-- Toolbar Visual Editor Melayu -->
                             <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" onclick="addHighlight('terjemahanMsEditor')" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
-                                <button type="button" class="toolbar-btn" onclick="removeHighlight('terjemahanMsEditor')" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
+                                <button type="button" class="toolbar-btn" data-highlight-target="terjemahanMsEditor" data-highlight-action="add" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
+                                <button type="button" class="toolbar-btn" data-highlight-target="terjemahanMsEditor" data-highlight-action="remove" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
                             </div>
                             <div id="terjemahanMsEditor" class="form-control content-editor" contenteditable="true" placeholder="Taipkan terjemahan ayat di sini..."></div>
                         </div>
@@ -246,6 +248,6 @@
     </div>
 </div>
 
-<script src="script.js"></script>
+<script src="script.js?v=20260810-3"></script>
 </body>
 </html>
