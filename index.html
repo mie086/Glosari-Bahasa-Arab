@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
+    <!-- Keselamatan CSP untuk membenarkan CDN dan Supabase -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ejivaczazdimurhtlmsj.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <title>Sistem Istilah Bahasa Arab</title>
     
@@ -19,7 +20,6 @@
         <p>Bahasa Arab</p>
     </header>
 
-    <!-- KEMASKINI: Tab Navigasi ditambah untuk "Koleksi Ayat" -->
     <nav class="nav-tabs">
         <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">Kamus Istilah</button>
         <button class="nav-btn" id="tabAyat" data-target="sectionAyat">Koleksi Ayat</button>
@@ -27,7 +27,7 @@
     </nav>
 
     <main>
-        <!-- SEKSYEN 1: Halaman Carian Istilah (Sedia ada) -->
+        <!-- SEKSYEN 1: Halaman Carian Istilah -->
         <section id="sectionCarian" class="view-section active">
             <div class="search-wrapper">
                 <div class="search-box">
@@ -39,7 +39,7 @@
             <div id="resultsList"></div>
         </section>
 
-        <!-- SEKSYEN 2 (BARU): Halaman Carian Koleksi Ayat -->
+        <!-- SEKSYEN 2: Halaman Carian Koleksi Ayat -->
         <section id="sectionAyat" class="view-section">
             <div class="search-wrapper">
                 <div class="search-box">
@@ -56,6 +56,7 @@
 
         <!-- SEKSYEN 3: Panel Admin -->
         <section id="sectionAdmin" class="view-section">
+            <!-- Borang Log Masuk -->
             <div id="adminAuthBox" style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-color); max-width: 400px; margin: 0 auto;">
                 <h3 style="margin-bottom: 12px; color: var(--primary-color);">Log Masuk Pentadbir</h3>
                 <form id="loginForm">
@@ -71,8 +72,8 @@
                 </form>
             </div>
 
+            <!-- Papan Pemuka Admin -->
             <div id="adminDashboardBox" style="display: none;">
-                <!-- KEMASKINI: Butang Tambah Data -->
                 <div class="admin-top-bar" style="flex-wrap: wrap; gap: 12px;">
                     <div>
                         <h3>Pangkalan Data Supabase SQL</h3>
@@ -84,7 +85,7 @@
                     </div>
                 </div>
 
-                <!-- Borang: Tambah/Ubah Istilah (Sedia ada) -->
+                <!-- Borang: Tambah/Ubah Istilah -->
                 <div class="form-section" id="formSection">
                     <h2 id="formTitle">Tambah Istilah Baru</h2>
                     <form id="termForm">
@@ -101,14 +102,14 @@
                             </div>
                         </div>
 
+                        <!-- KEMASKINI: Borang Istilah tanpa Kategori lama & Label Disiplin Ilmu ditukar kepada Kategori -->
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="category">Kategori Utama (Pilihan)</label>
-                                <select id="category" class="form-control">
-                                    <option value="">-- Tiada Kategori / Biarkan Kosong --</option>
-                                    <option value="Fi'il">Fi'il (Kata Kerja)</option>
-                                    <option value="Isim">Isim (Kata Nama)</option>
-                                    <option value="Harf">Harf (Huruf/Kata Tugas)</option>
+                                <label for="disiplinIlmu">Kategori</label>
+                                <select id="disiplinIlmu" class="form-control">
+                                    <option value="">-- Pilih Kategori --</option>
+                                    <option value="sorof">Ilmu Sorof (Morfologi)</option>
+                                    <option value="nahu">Ilmu Nahu (Sintaksis)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -141,37 +142,45 @@
                     </form>
                 </div>
 
-                <!-- KEMASKINI (BARU): Borang Tambah/Ubah Koleksi Ayat dengan Visual Editor -->
+                <!-- Borang: Tambah/Ubah Koleksi Ayat -->
                 <div class="form-section" id="formAyatSection">
                     <h2 id="formAyatTitle">Tambah Koleksi Ayat Baru</h2>
+                    
+                    <!-- Butang Induk Pautkan Ayat (Telah Diperkemas) -->
+                    <div style="background: #f8fafc; padding: 12px; border: 1px dashed var(--accent-color); border-radius: 8px; margin-bottom: 20px; display: flex; gap: 8px; align-items: center;">
+                        <span style="font-size: 0.9rem; font-weight: 600; color: var(--primary-color);">Tindakan Visual:</span>
+                        <button type="button" class="btn btn-primary" data-highlight-action="add" style="padding: 6px 16px; font-size: 0.85rem;">🔗 Pautkan Perkataan (Sorof/Nahu)</button>
+                        <button type="button" class="btn btn-danger" data-highlight-action="remove" style="padding: 6px 16px; font-size: 0.85rem;">❌ Buang Pautan Sedia Ada</button>
+                    </div>
+
                     <form id="ayatForm">
                         <input type="hidden" id="ayatId">
                         
                         <div class="form-group">
                             <label>Ayat Penuh (Bahasa Arab)</label>
-                            <!-- Toolbar Visual Editor Arab -->
-                            <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" data-highlight-target="ayatArEditor" data-highlight-action="add" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
-                                <button type="button" class="toolbar-btn" data-highlight-target="ayatArEditor" data-highlight-action="remove" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
-                            </div>
-                            <!-- Pengganti textarea: ContentEditable -->
                             <div id="ayatArEditor" class="form-control arabic-input content-editor" contenteditable="true" placeholder="Taipkan atau paste ayat bahasa arab di sini..."></div>
                         </div>
 
                         <div class="form-group">
                             <label>Terjemahan Penuh (Bahasa Melayu)</label>
-                            <!-- Toolbar Visual Editor Melayu -->
-                            <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" data-highlight-target="terjemahanMsEditor" data-highlight-action="add" title="Pautkan Perkataan dengan Kata Kunci" style="width: auto; padding: 0 10px;">🔗 Pautkan Perkataan</button>
-                                <button type="button" class="toolbar-btn" data-highlight-target="terjemahanMsEditor" data-highlight-action="remove" title="Buang Pautan" style="width: auto; padding: 0 10px;">❌ Buang</button>
-                            </div>
                             <div id="terjemahanMsEditor" class="form-control content-editor" contenteditable="true" placeholder="Taipkan terjemahan ayat di sini..."></div>
                         </div>
 
                         <div class="form-group">
-                            <label for="kataKunciAyat">Senarai Kata Kunci Carian (Dijana Secara Automatik)</label>
-                            <!-- Kotak ini kini ReadOnly. Sistem akan ambil kata kunci secara automatik dari perkataan yang admin highlight -->
-                            <input type="text" id="kataKunciAyat" class="form-control" placeholder="Akan diisi secara automatik apabila anda memautkan perkataan di atas..." readonly style="background-color: #f1f5f9; cursor: not-allowed;">
+                            <label>Senarai Kata Kunci Carian (Dijana Secara Automatik)</label>
+                            
+                            <!-- Menggunakan CSS form-grid sedia ada untuk paparan sebelah-menyebelah -->
+                            <div class="form-grid" style="gap: 8px;">
+                                <div>
+                                    <input type="text" id="kataKunciSorofAyat" class="form-control" placeholder="Morfologi (Sorof)..." readonly style="background-color: #f1f5f9; border-color: #a7f3d0; color: #047857; font-size: 0.85rem;">
+                                </div>
+                                <div>
+                                    <input type="text" id="kataKunciNahuAyat" class="form-control" placeholder="Sintaksis (Nahu)..." readonly style="background-color: #f1f5f9; border-color: #bae6fd; color: #0369a1; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            
+                            <!-- Input tersembunyi: Berfungsi untuk menggabungkan semua kata kunci dan menghantarnya ke Supabase -->
+                            <input type="hidden" id="kataKunciAyat">
                         </div>
 
                         <div class="form-actions">
@@ -181,13 +190,13 @@
                     </form>
                 </div>
 
-                <!-- KEMASKINI (BARU): Penukar Paparan Jadual Panel Admin -->
+                <!-- Penukar Paparan Jadual Panel Admin -->
                 <div style="margin-top: 32px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; display: flex; gap: 8px;">
                     <button class="btn btn-primary" id="btnTabJadualIstilah" style="flex: 1;">Paparkan Jadual Istilah</button>
                     <button class="btn btn-secondary" id="btnTabJadualAyat" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Ayat</button>
                 </div>
 
-                <!-- Pembungkus Jadual Istilah (Sedia ada) -->
+                <!-- Pembungkus Jadual Istilah -->
                 <div id="jadualIstilahWrapper">
                     <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
                         <h3 style="color: var(--primary-color); margin: 0;">Jadual Istilah Nahu/Sarf</h3>
@@ -208,7 +217,7 @@
                     </div>
                 </div>
 
-                <!-- Pembungkus Jadual Ayat (Baru) -->
+                <!-- Pembungkus Jadual Ayat -->
                 <div id="jadualAyatWrapper" style="display: none;">
                     <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
                         <h3 style="color: var(--primary-color); margin: 0;">Jadual Koleksi Ayat</h3>
@@ -235,19 +244,47 @@
 
 <button type="button" class="floating-search-btn" id="btnFloatingSearch" title="Kembali ke Carian">🔍</button>
 
-<!-- KOTAK PROMPT KASTAM (Pengganti tetingkap terbina pelayar web) -->
+<!-- KOTAK PROMPT KASTAM (Dikemaskini dengan Datalist Sorof & Nahu yang Bersih) -->
 <div id="customPromptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
-    <div style="background: var(--card-bg); padding: 24px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-        <h4 style="margin-bottom: 8px; color: var(--primary-color);">Masukkan Rujukan Tatabahasa</h4>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">(cth: na't, jamak, muzakkar)</p>
-        <input type="text" id="customPromptInput" class="form-control" autocomplete="off" placeholder="Taipkan atau paste di sini...">
-        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 8px;">
+    <div style="background: var(--card-bg); padding: 24px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        
+        <h4 style="margin-bottom: 16px; color: var(--primary-color); border-bottom: 2px solid var(--bg-color); padding-bottom: 8px;">Pautkan Ayat (Arab & Terjemahan)</h4>
+        
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem;">1. Perkataan Arab</label>
+            <input type="text" id="promptArab" class="form-control arabic-input" autocomplete="off" placeholder="Salin/taip perkataan Arab...">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem;">2. Perkataan Terjemahan (Pilihan)</label>
+            <input type="text" id="promptMelayu" class="form-control" autocomplete="off" placeholder="Salin/taip terjemahan Melayu (jika ada)...">
+            <span style="font-size: 0.7rem; color: var(--text-muted);">Biarkan kosong jika tiada terjemahan langsung untuk perkataan ini.</span>
+        </div>
+
+        <!-- Bahagian Kata Kunci Diasingkan dengan Datalist -->
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; color: #047857;">3a. Kata Kunci Sorof (Wazan/Bentuk)</label>
+            <input type="text" id="promptKataKunciSorof" list="senaraiSorof" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #a7f3d0;">
+            <datalist id="senaraiSorof"></datalist>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-size: 0.85rem; color: #0369a1;">3b. Kata Kunci Nahu (I'rab/Struktur)</label>
+            <input type="text" id="promptKataKunciNahu" list="senaraiNahu" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #bae6fd;">
+            <datalist id="senaraiNahu"></datalist>
+        </div>
+        
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: -8px; margin-bottom: 16px; font-style: italic;">
+            *Isi sekurang-kurangnya salah satu kotak kata kunci di atas.
+        </div>
+
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;">
             <button type="button" class="btn btn-secondary" id="btnCustomPromptCancel">Batal</button>
-            <button type="button" class="btn btn-primary" id="btnCustomPromptOk">OK Pautkan</button>
+            <button type="button" class="btn btn-primary" id="btnCustomPromptOk">OK Pautkan Semua</button>
         </div>
     </div>
 </div>
 
-<script src="script.js?v=20260810-3"></script>
+<script src="script.js?v=20260810-4"></script>
 </body>
 </html>
