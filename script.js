@@ -11,7 +11,7 @@ const SAFE_HTML_CONFIG = {
         "b", "strong", "i", "em", "u", "span", "br", "ul", "ol", "li",
         "mark", "div", "table", "thead", "tbody", "tr", "th", "td"
     ],
-    ALLOWED_ATTR: ["class", "data-key", "style"],
+    ALLOWED_ATTR: ["class", "data-key", "data-sorof", "data-nahu", "title", "style"],
     FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "svg", "math"],
     FORBID_ATTR: [
         "id", "name", "href", "src", "srcset", "action", "formaction", "target",
@@ -42,10 +42,6 @@ const ESCAPED_RICH_TAG_RE = /&lt;\s*\/?\s*(?:b|strong|i|em|u|span|br|ul|ol|li|ma
 function decodeEscapedRichHtml(value) {
     let result = String(value ?? "");
 
-    // Sesetengah rekod lama mungkin telah disimpan sebagai HTML-escaped
-    // (contoh: &lt;ul&gt;...&lt;/ul&gt;). Kita hanya decode apabila kandungan
-    // benar-benar kelihatan seperti rich-text yang di-escape, kemudian
-    // sanitize semula. Ini mengelakkan plain text biasa daripada ditukar.
     for (let i = 0; i < 2 && ESCAPED_RICH_TAG_RE.test(result); i++) {
         const decoded = result
             .replace(/&lt;/gi, "<")
@@ -83,7 +79,6 @@ function escapeAttr(value) {
 function sanitizeEditorHtml(html) {
     return sanitizeHtml(html);
 }
-
 
 // Pembolehubah Global
 let dataIstilah = [];
@@ -130,7 +125,7 @@ const adminSearchInput = document.getElementById("adminSearchInput");
 const inputId = document.getElementById("termId");
 const inputTitleMs = document.getElementById("titleMs");
 const inputTitleAr = document.getElementById("titleAr");
-const inputCategory = document.getElementById("category");
+const inputDisiplin = document.getElementById("disiplinIlmu"); // Diganti dari Kategori lama
 const inputKeywords = document.getElementById("keywords");
 const inputDefinition = document.getElementById("definition");
 
@@ -149,7 +144,7 @@ const jadualAyatWrapper = document.getElementById("jadualAyatWrapper");
 const adminSearchAyatInput = document.getElementById("adminSearchAyatInput");
 const adminTableAyatBody = document.getElementById("adminTableAyatBody");
 
-// KEMASKINI: DOM Elements untuk Visual Editor Borang Ayat
+// DOM Elements untuk Visual Editor Borang Ayat
 const inputAyatId = document.getElementById("ayatId");
 const ayatArEditor = document.getElementById("ayatArEditor");
 const terjemahanMsEditor = document.getElementById("terjemahanMsEditor");
@@ -217,10 +212,41 @@ async function loadDataFromSupabase() {
     renderAdminList();
     renderAdminAyatList();
     renderAlphabeticalDirectory();
+    
+    // Kemaskini senarai juntai bawah kata kunci secara automatik
+    kemaskiniSenaraiDatalist();
+}
+
+function kemaskiniSenaraiDatalist() {
+    const listSorof = document.getElementById("senaraiSorof");
+    const listNahu = document.getElementById("senaraiNahu");
+    
+    if (!listSorof || !listNahu) return;
+
+    listSorof.innerHTML = "";
+    listNahu.innerHTML = "";
+
+    dataIstilah.forEach(item => {
+        if (item.title_ms) {
+            const istilahVal = escapeAttr(item.title_ms.trim().toLowerCase());
+            const option = `<option value="${istilahVal}"></option>`;
+
+            if (item.disiplin_ilmu === 'sorof') {
+                listSorof.innerHTML += option;
+            } 
+            else if (item.disiplin_ilmu === 'nahu') {
+                listNahu.innerHTML += option;
+            } 
+            else {
+                listSorof.innerHTML += option;
+                listNahu.innerHTML += option;
+            }
+        }
+    });
 }
 
 // =========================================================================
-// FUNGSI KHAS: MENGALIH KELUAR TAG HTML (UNTUK JADUAL & CARIAN)
+// FUNGSI KHAS: MENGALIH KELUAR TAG HTML
 // =========================================================================
 function stripHtml(html) {
     if (!html) return "";
@@ -230,7 +256,7 @@ function stripHtml(html) {
 }
 
 // =========================================================================
-// PAPARAN AWAM: CARIAN & KAD MAKLUMAT AYAT (INTERAKTIF)
+// PAPARAN AWAM: CARIAN & KAD MAKLUMAT AYAT
 // =========================================================================
 function handleSearchAyatInput(e) {
     const val = e.target.value.trim().toLowerCase();
@@ -265,7 +291,6 @@ function handleSearchAyatInput(e) {
             const div = document.createElement("div");
             div.className = "suggestion-item";
             
-            // KEMASKINI: Logik untuk membina paparan kata kunci yang kemas
             let keywordsHtml = "";
             if (item.kata_kunci && item.kata_kunci.trim() !== "") {
                 keywordsHtml = `
@@ -278,7 +303,6 @@ function handleSearchAyatInput(e) {
             div.innerHTML = `
                 <div class="suggestion-info" style="display: flex; flex-direction: column; justify-content: center;">
                     <span class="suggestion-title">${escapeHtml(stripHtml(item.terjemahan_ms).substring(0, 40))}...</span>
-                    <!-- Kata Kunci akan muncul di sini (di bawah terjemahan) -->
                     ${keywordsHtml}
                 </div>
                 <div class="suggestion-arabic">${escapeHtml(stripHtml(item.ayat_ar).substring(0, 30))}...</div>
@@ -317,18 +341,64 @@ function renderSearchAyatCard() {
     let displayAyatAr = selectedAyatItem.ayat_ar ? sanitizeHtml(selectedAyatItem.ayat_ar).replace(/admin-highlight/g, "public-highlight") : "";
     let displayTerjemahan = selectedAyatItem.terjemahan_ms ? sanitizeHtml(selectedAyatItem.terjemahan_ms).replace(/admin-highlight/g, "public-highlight") : "";
     
-    // Bina zon lencana berpusat yang seragam dan kemas
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = displayAyatAr + " " + displayTerjemahan;
+    
+    const marks = tempDiv.querySelectorAll("mark.public-highlight");
+    const sorofSet = new Set();
+    const nahuSet = new Set();
+    const legacySet = new Set();
+    
+    marks.forEach(m => {
+        if (m.getAttribute("data-sorof")) sorofSet.add(m.getAttribute("data-sorof"));
+        if (m.getAttribute("data-nahu")) nahuSet.add(m.getAttribute("data-nahu"));
+        if (m.getAttribute("data-key")) legacySet.add(m.getAttribute("data-key"));
+    });
+
     let badgesHtml = "";
-    if (selectedAyatItem.kata_kunci && selectedAyatItem.kata_kunci.trim() !== "") {
-        const keywordsArr = selectedAyatItem.kata_kunci.split(",").map(k => k.trim()).filter(k => k);
+    if (sorofSet.size > 0 || nahuSet.size > 0 || legacySet.size > 0) {
+        let sorofHtml = "";
+        let nahuHtml = "";
+        let legacyHtml = "";
+
+        if (sorofSet.size > 0) {
+            sorofHtml = `
+                <div style="margin-bottom: 16px;">
+                    <div style="font-size: 0.75rem; color: #059669; text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Morfologi (Ilmu Sorof)</div>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                        ${Array.from(sorofSet).map(kw => `<span class="badge-keyword badge-sorof" data-target="${escapeAttr(kw)}" data-type="sorof">${escapeHtml(kw)}</span>`).join('')}
+                    </div>
+                </div>`;
+        }
+
+        if (nahuSet.size > 0) {
+            nahuHtml = `
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 0.75rem; color: #0284c7; text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Sintaksis (Ilmu Nahu)</div>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                        ${Array.from(nahuSet).map(kw => `<span class="badge-keyword badge-nahu" data-target="${escapeAttr(kw)}" data-type="nahu">${escapeHtml(kw)}</span>`).join('')}
+                    </div>
+                </div>`;
+        }
+
+        if (legacySet.size > 0 && sorofSet.size === 0 && nahuSet.size === 0) {
+             legacyHtml = `
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Kata Kunci</div>
+                    <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                        ${Array.from(legacySet).map(kw => `<span class="badge-keyword" data-target="${escapeAttr(kw)}" data-type="legacy">${escapeHtml(kw)}</span>`).join('')}
+                    </div>
+                </div>`;
+        }
+
         badgesHtml = `
         <div style="background-color: #f8fafc; border-top: 1px solid var(--border-color); padding: 20px; margin: 24px -20px -20px -20px;">
-            <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                Kata Kunci (Klik Untuk Serlahkan)
+            <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                Pilih Kata Kunci Untuk Serlahkan Ayat
             </div>
-            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;" class="interactive-badges-container">
-                ${keywordsArr.map(kw => `<span class="badge-keyword" data-target="${escapeAttr(kw.toLowerCase())}" style="margin: 0;">${escapeHtml(kw)}</span>`).join('')}
-            </div>
+            ${sorofHtml}
+            ${nahuHtml}
+            ${legacyHtml}
         </div>`;
     }
 
@@ -348,23 +418,34 @@ function renderSearchAyatCard() {
         
     resultsAyatList.appendChild(card);
 
-    // Logik Interaktif yang disatukan
     const badgeElements = card.querySelectorAll(".badge-keyword");
     const highlightElements = card.querySelectorAll(".public-highlight");
     
     badgeElements.forEach(badge => {
         badge.addEventListener("click", () => {
             const targetKey = badge.getAttribute("data-target");
+            const targetType = badge.getAttribute("data-type"); 
             const isActive = badge.classList.contains("active");
             
             badgeElements.forEach(b => b.classList.remove("active"));
-            highlightElements.forEach(h => h.classList.remove("active"));
+            highlightElements.forEach(h => {
+                h.classList.remove("active", "active-sorof", "active-nahu");
+            });
             
             if (!isActive) {
                 badge.classList.add("active");
+                
                 highlightElements.forEach(h => {
-                    if (h.getAttribute("data-key") === targetKey) {
-                        h.classList.add("active");
+                    let isMatch = false;
+                    
+                    if (targetType === "sorof" && h.getAttribute("data-sorof") === targetKey) isMatch = true;
+                    if (targetType === "nahu" && h.getAttribute("data-nahu") === targetKey) isMatch = true;
+                    if (targetType === "legacy" && h.getAttribute("data-key") === targetKey) isMatch = true;
+
+                    if (isMatch) {
+                        if (targetType === "sorof") h.classList.add("active-sorof");
+                        else if (targetType === "nahu") h.classList.add("active-nahu");
+                        else h.classList.add("active"); 
                     }
                 });
             }
@@ -409,80 +490,92 @@ btnTabJadualAyat.addEventListener("click", () => {
 
 
 // =========================================================================
-// PANEL ADMIN: FUNGSI VISUAL EDITOR (KEMASKINI: MODAL KASTAM)
+// PANEL ADMIN: FUNGSI VISUAL EDITOR GABUNGAN (Sorof & Nahu)
 // =========================================================================
-let savedSelectionRange = null; // Pembolehubah untuk menyimpan memori highlight
 
-function addHighlight(editorId) {
-    const editor = document.getElementById(editorId);
-    const selection = window.getSelection();
-    
-    if (!selection.rangeCount || selection.isCollapsed) {
-        alert("Sila highlight (pilih) perkataan terlebih dahulu menggunakan tetikus.");
-        return;
-    }
-    
-    if (!editor.contains(selection.anchorNode)) {
-        alert("Sila pastikan anda highlight perkataan di dalam kotak editor semasa.");
-        return;
-    }
-
-    // SIMPAN kedudukan teks yang di-highlight sebelum modal dibuka
-    savedSelectionRange = selection.getRangeAt(0).cloneRange();
-
-    // Buka kotak Pop-up Kastam
+function addHighlight() {
     const modal = document.getElementById("customPromptModal");
-    const input = document.getElementById("customPromptInput");
+    const inputArab = document.getElementById("promptArab");
+    const inputMelayu = document.getElementById("promptMelayu");
+    const inputSorof = document.getElementById("promptKataKunciSorof");
+    const inputNahu = document.getElementById("promptKataKunciNahu");
     
-    input.value = "";
+    if(inputArab) inputArab.value = "";
+    if(inputMelayu) inputMelayu.value = "";
+    if(inputSorof) inputSorof.value = "";
+    if(inputNahu) inputNahu.value = "";
+    
     modal.style.display = "flex";
-    
-    // Auto-fokus pada kotak taip selepas 0.1 saat
-    setTimeout(() => input.focus(), 100);
-};
+    setTimeout(() => { if(inputArab) inputArab.focus(); }, 100);
+}
 
-// Logik Butang "OK Pautkan"
-document.getElementById("btnCustomPromptOk").addEventListener("click", () => {
-    const input = document.getElementById("customPromptInput");
-    const keyword = input.value;
+const btnCustomPromptOk = document.getElementById("btnCustomPromptOk");
+if (btnCustomPromptOk) {
+    btnCustomPromptOk.addEventListener("click", () => {
+        const perkataanArab = document.getElementById("promptArab").value.trim();
+        const perkataanMelayu = document.getElementById("promptMelayu").value.trim();
+        const kataKunciSorof = document.getElementById("promptKataKunciSorof").value.trim();
+        const kataKunciNahu = document.getElementById("promptKataKunciNahu").value.trim();
 
-    if (!keyword || keyword.trim() === "") {
-        alert("Sila masukkan rujukan tatabahasa atau tekan Batal.");
-        return;
-    }
+        if (!perkataanArab || (!kataKunciSorof && !kataKunciNahu)) {
+            alert("Sila isi Perkataan Arab dan sekurang-kurangnya satu Kata Kunci (Sorof atau Nahu).");
+            return;
+        }
 
-    if (savedSelectionRange) {
-        const mark = document.createElement("mark");
-        mark.className = "admin-highlight";
-        mark.setAttribute("data-key", keyword.trim().toLowerCase());
-        mark.textContent = savedSelectionRange.toString();
-
-        savedSelectionRange.deleteContents();
-        savedSelectionRange.insertNode(mark);
+        const editorArab = document.getElementById("ayatArEditor");
+        const editorMelayu = document.getElementById("terjemahanMsEditor");
+        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
-        window.getSelection().removeAllRanges();
-        savedSelectionRange = null;
+        const regexArab = new RegExp(`(${escapeRegExp(perkataanArab)})`);
+        let regexMelayu = null;
+
+        if (!regexArab.test(editorArab.innerHTML)) {
+            alert(`Ralat: Perkataan Arab "${perkataanArab}" tidak dijumpai di dalam teks editor Arab. Sila periksa ejaan.`);
+            return; 
+        }
+
+        if (perkataanMelayu !== "") {
+            regexMelayu = new RegExp(`(${escapeRegExp(perkataanMelayu)})`);
+            if (!regexMelayu.test(editorMelayu.innerHTML)) {
+                alert(`Ralat: Terjemahan "${perkataanMelayu}" tidak dijumpai di dalam teks editor Melayu. Sila betulkan ejaan atau kosongkan ruangan terjemahan.`);
+                return; 
+            }
+        }
+
+        let dataAttributes = "";
+        let tooltipTitles = [];
+        
+        if (kataKunciSorof) {
+            dataAttributes += ` data-sorof="${escapeAttr(kataKunciSorof.toLowerCase())}"`;
+            tooltipTitles.push(`Sorof: ${kataKunciSorof}`);
+        }
+        if (kataKunciNahu) {
+            dataAttributes += ` data-nahu="${escapeAttr(kataKunciNahu.toLowerCase())}"`;
+            tooltipTitles.push(`Nahu: ${kataKunciNahu}`);
+        }
+        
+        const combinedTooltip = escapeAttr(tooltipTitles.join(" | "));
+        const markElementHtml = `<mark class="admin-highlight"${dataAttributes} title="${combinedTooltip}">$1</mark>`;
+
+        editorArab.innerHTML = editorArab.innerHTML.replace(regexArab, markElementHtml);
+
+        if (regexMelayu) {
+            editorMelayu.innerHTML = editorMelayu.innerHTML.replace(regexMelayu, markElementHtml);
+        }
+
         updateKeywordsList();
-    }
+        document.getElementById("customPromptModal").style.display = "none";
+    });
+}
 
-    document.getElementById("customPromptModal").style.display = "none";
-});
+const btnCustomPromptCancel = document.getElementById("btnCustomPromptCancel");
+if (btnCustomPromptCancel) {
+    btnCustomPromptCancel.addEventListener("click", () => {
+        document.getElementById("customPromptModal").style.display = "none";
+    });
+}
 
-// Logik Butang "Batal"
-document.getElementById("btnCustomPromptCancel").addEventListener("click", () => {
-    document.getElementById("customPromptModal").style.display = "none";
-    savedSelectionRange = null; // Buang dari memori
-});
-
-// Logik Pantas: Tekan 'Enter' pada papan kekunci untuk terus pautkan
-document.getElementById("customPromptInput").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        document.getElementById("btnCustomPromptOk").click();
-    }
-});
-
-function removeHighlight(editorId) {
+function removeHighlight() {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
@@ -496,22 +589,42 @@ function removeHighlight(editorId) {
     } else {
         alert("Sila klik tepat pada perkataan berwarna kuning (highlight) yang ingin dibuang pautannya.");
     }
-};
+}
 
 function updateKeywordsList() {
     const marks1 = Array.from(ayatArEditor.querySelectorAll("mark.admin-highlight"));
     const marks2 = Array.from(terjemahanMsEditor.querySelectorAll("mark.admin-highlight"));
     const allMarks = [...marks1, ...marks2];
     
-    const keywords = new Set();
+    const sorofSet = new Set();
+    const nahuSet = new Set();
+    const legacySet = new Set();
+    
     allMarks.forEach(m => {
-        if (m.getAttribute("data-key")) keywords.add(m.getAttribute("data-key"));
+        if (m.getAttribute("data-sorof")) sorofSet.add(m.getAttribute("data-sorof"));
+        if (m.getAttribute("data-nahu")) nahuSet.add(m.getAttribute("data-nahu"));
+        if (m.getAttribute("data-key")) legacySet.add(m.getAttribute("data-key")); 
     });
     
-    inputKataKunciAyat.value = Array.from(keywords).join(", ");
+    const inputSorof = document.getElementById("kataKunciSorofAyat");
+    const inputNahu = document.getElementById("kataKunciNahuAyat");
+    const inputHiddenAll = document.getElementById("kataKunciAyat");
+
+    if (inputSorof) {
+        inputSorof.value = Array.from(sorofSet).join(", ");
+    }
+    
+    if (inputNahu) {
+        const gabunganNahu = [...Array.from(nahuSet), ...Array.from(legacySet)];
+        inputNahu.value = gabunganNahu.join(", ");
+    }
+    
+    if (inputHiddenAll) {
+        const allKeywords = new Set([...sorofSet, ...nahuSet, ...legacySet]);
+        inputHiddenAll.value = Array.from(allKeywords).join(", ");
+    }
 }
 
-// Pantau setiap kali admin menaip, atau memadam teks
 ayatArEditor.addEventListener('input', updateKeywordsList);
 terjemahanMsEditor.addEventListener('input', updateKeywordsList);
 
@@ -525,6 +638,7 @@ btnBukaBorangAyat.addEventListener("click", () => {
     inputAyatId.value = "";
     ayatArEditor.innerHTML = "";
     terjemahanMsEditor.innerHTML = "";
+    updateKeywordsList();
     formAyatTitle.textContent = "Tambah Koleksi Ayat Baru";
     formAyatSection.classList.add("active");
 });
@@ -536,6 +650,7 @@ function closeFormAyat() {
     inputAyatId.value = ""; 
     ayatArEditor.innerHTML = "";
     terjemahanMsEditor.innerHTML = "";
+    updateKeywordsList();
 }
 
 function renderAdminAyatList(filterText = "") {
@@ -594,7 +709,8 @@ document.addEventListener("click", (e) => {
 ayatForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
-    // Simpan data HTML (Visual Editor) ke pangkalan data
+    updateKeywordsList();
+
     const ayatObject = {
         ayat_ar: sanitizeEditorHtml(ayatArEditor.innerHTML.trim()),
         terjemahan_ms: sanitizeEditorHtml(terjemahanMsEditor.innerHTML.trim()),
@@ -628,14 +744,14 @@ function editAyat(id) {
     formAyatTitle.textContent = "Ubah Koleksi Ayat";
     inputAyatId.value = item.id;
     
-    // Kembalikan kod HTML ke dalam editor
     ayatArEditor.innerHTML = sanitizeEditorHtml(item.ayat_ar || "");
     terjemahanMsEditor.innerHTML = sanitizeEditorHtml(item.terjemahan_ms || "");
-    inputKataKunciAyat.value = item.kata_kunci || "";
+    
+    updateKeywordsList();
     
     formAyatSection.classList.add("active");
     formAyatSection.scrollIntoView({ behavior: "smooth" });
-};
+}
 
 async function deleteAyat(id) {
     if (confirm("Adakah anda pasti mahu memadam koleksi ayat ini?")) {
@@ -653,10 +769,10 @@ async function deleteAyat(id) {
             renderSearchAyatCard();
         }
     }
-};
+}
 
 // =========================================================================
-// KOD SEDIA ADA: DIREKTORI ABJAD, CARIAN ISTILAH, DAN ADMIN ISTILAH
+// DIREKTORI ABJAD, CARIAN ISTILAH, DAN ADMIN ISTILAH
 // =========================================================================
 
 function renderAlphabeticalDirectory() {
@@ -752,7 +868,7 @@ function handleSearchInput(e) {
         const searchLower = currentSearch.toLowerCase();
         return item.title_ms.toLowerCase().includes(searchLower) ||
             item.title_ar.includes(searchLower) ||
-            item.keywords.some(kw => kw.includes(searchLower));
+            (item.keywords && item.keywords.some(kw => kw.includes(searchLower)));
     });
 
     suggestionsList.innerHTML = "";
@@ -760,10 +876,15 @@ function handleSearchInput(e) {
         matches.forEach(item => {
             const div = document.createElement("div");
             div.className = "suggestion-item";
+            
+            let paparanKategori = 'Tiada Kategori';
+            if (item.disiplin_ilmu === 'sorof') paparanKategori = 'Sorof';
+            else if (item.disiplin_ilmu === 'nahu') paparanKategori = 'Nahu';
+
             div.innerHTML = `
                 <div class="suggestion-info">
                     <span class="suggestion-title">${escapeHtml(item.title_ms)}</span>
-                    <span class="suggestion-cat">${escapeHtml(item.category ? item.category : 'Tiada Kategori')}</span>
+                    <span class="suggestion-cat">${escapeHtml(paparanKategori)}</span>
                 </div>
                 <div class="suggestion-arabic">${escapeHtml(item.title_ar)}</div>
             `;
@@ -927,12 +1048,16 @@ function renderSearchCard() {
     let formattedDefinition = selectedSearchItem.definition
         ? sanitizeHtml(selectedSearchItem.definition).replace(/\n/g, "<br>")
         : "";
+        
+    let paparanKategori = '';
+    if (selectedSearchItem.disiplin_ilmu === 'sorof') paparanKategori = 'Sorof';
+    else if (selectedSearchItem.disiplin_ilmu === 'nahu') paparanKategori = 'Nahu';
 
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title-group">
                 <div class="title-ms">${escapeHtml(selectedSearchItem.title_ms)}</div>
-                ${selectedSearchItem.category ? `<span class="category-badge">${escapeHtml(selectedSearchItem.category)}</span>` : ''}
+                ${paparanKategori ? `<span class="category-badge">${escapeHtml(paparanKategori)}</span>` : ''}
             </div>
             <div class="title-ar">${escapeHtml(selectedSearchItem.title_ar)}</div>
         </div>
@@ -966,7 +1091,7 @@ function renderAdminList(filterText = "") {
     const filteredData = dataIstilah.filter(item => {
         return item.title_ms.toLowerCase().includes(lowerFilter) || 
                item.title_ar.includes(lowerFilter) ||
-               (item.category && item.category.toLowerCase().includes(lowerFilter)) ||
+               (item.disiplin_ilmu && item.disiplin_ilmu.toLowerCase().includes(lowerFilter)) ||
                (item.keywords && item.keywords.some(kw => kw.includes(lowerFilter)));
     });
 
@@ -977,10 +1102,15 @@ function renderAdminList(filterText = "") {
 
     filteredData.forEach(item => {
         const tr = document.createElement("tr");
+        
+        let paparanKategori = 'Kosong';
+        if (item.disiplin_ilmu === 'sorof') paparanKategori = 'Sorof';
+        else if (item.disiplin_ilmu === 'nahu') paparanKategori = 'Nahu';
+
         tr.innerHTML = `
             <td><strong>${escapeHtml(item.title_ms)}</strong></td>
             <td class="td-arabic">${escapeHtml(item.title_ar)}</td>
-            <td><span class="badge">${escapeHtml(item.category ? item.category : 'Kosong')}</span></td>
+            <td><span class="badge">${escapeHtml(paparanKategori)}</span></td>
             <td>
                 <div class="actions-cell">
                     <button class="btn btn-edit" type="button" data-action="edit-item" data-id="${escapeAttr(item.id)}">Ubah</button>
@@ -1044,7 +1174,7 @@ termForm.addEventListener("submit", async (e) => {
         id: id,
         title_ms: inputTitleMs.value,
         title_ar: inputTitleAr.value,
-        category: inputCategory.value,
+        disiplin_ilmu: inputDisiplin ? inputDisiplin.value : null,
         definition: sanitizeEditorHtml(inputDefinition.value),
         characteristics: chrArray,
         table_data: null, 
@@ -1073,7 +1203,7 @@ function editItem(id) {
     inputId.value = item.id;
     inputTitleMs.value = item.title_ms;
     inputTitleAr.value = item.title_ar;
-    inputCategory.value = item.category || "";
+    if (inputDisiplin) inputDisiplin.value = item.disiplin_ilmu || ""; 
     inputKeywords.value = item.keywords ? item.keywords.join(", ") : "";
     inputDefinition.value = item.definition;
     
@@ -1107,7 +1237,7 @@ function editItem(id) {
 
     formSection.classList.add("active");
     formSection.scrollIntoView({ behavior: "smooth" });
-};
+}
 
 async function deleteItem(id) {
     if (confirm("Adakah anda pasti mahu memadam istilah ini dari pangkalan data cloud?")) {
@@ -1122,7 +1252,7 @@ async function deleteItem(id) {
             renderSearchCard();
         }
     }
-};
+}
 
 btnBukaBorang.addEventListener("click", () => {
     closeFormAyat();
@@ -1288,11 +1418,10 @@ document.addEventListener("click", (e) => {
 });
 
 document.addEventListener("click", (e) => {
-    const button = e.target.closest("button[data-highlight-target][data-highlight-action]");
+    const button = e.target.closest("button[data-highlight-action]");
     if (!button) return;
-    const targetId = button.getAttribute("data-highlight-target");
-    if (button.getAttribute("data-highlight-action") === "add") addHighlight(targetId);
-    if (button.getAttribute("data-highlight-action") === "remove") removeHighlight(targetId);
+    if (button.getAttribute("data-highlight-action") === "add") addHighlight();
+    if (button.getAttribute("data-highlight-action") === "remove") removeHighlight();
 });
 
 function applyTableFormat(type, colorValue = null) {
@@ -1318,7 +1447,7 @@ function applyTableFormat(type, colorValue = null) {
     input.selectionStart = start;
     input.selectionEnd = start + modifiedText.length;
     input.dispatchEvent(new Event('input'));
-};
+}
 
 function applyFormat(textareaId, type, colorValue = null) {
     if (type === "color" && !/^#[0-9a-f]{6}$/i.test(String(colorValue || ""))) return;
@@ -1353,7 +1482,7 @@ function applyFormat(textareaId, type, colorValue = null) {
     textarea.selectionStart = start;
     textarea.selectionEnd = start + modifiedText.length;
     textarea.dispatchEvent(new Event('input'));
-};
+}
 
 async function checkUserSession() {
     const { data: { session } } = await supabaseClient.auth.getSession();
