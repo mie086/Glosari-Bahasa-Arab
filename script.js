@@ -500,13 +500,48 @@ function addHighlight() {
     const inputSorof = document.getElementById("promptKataKunciSorof");
     const inputNahu = document.getElementById("promptKataKunciNahu");
     
+    // Kosongkan input terlebih dahulu
     if(inputArab) inputArab.value = "";
     if(inputMelayu) inputMelayu.value = "";
     if(inputSorof) inputSorof.value = "";
     if(inputNahu) inputNahu.value = "";
     
+    // Tangkap teks yang diserlahkan (highlight) menggunakan tetikus
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
+
+    // Semak jika ada teks yang diserlahkan
+    if (selectedText) {
+        const anchorNode = selection.anchorNode;
+        const editorArab = document.getElementById("ayatArEditor");
+        const editorMelayu = document.getElementById("terjemahanMsEditor");
+
+        // Jika teks diserlahkan di dalam kotak Arab
+        if (editorArab && editorArab.contains(anchorNode)) {
+            inputArab.value = selectedText;
+        } 
+        // Jika teks diserlahkan di dalam kotak Melayu
+        else if (editorMelayu && editorMelayu.contains(anchorNode)) {
+            inputMelayu.value = selectedText;
+        } 
+        // Jika diserlahkan di luar, letak di kotak Arab secara lalai
+        else {
+            inputArab.value = selectedText;
+        }
+    }
+
     modal.style.display = "flex";
-    setTimeout(() => { if(inputArab) inputArab.focus(); }, 100);
+    
+    // Auto-fokus pintar: Pergi ke kotak kosong yang seterusnya
+    setTimeout(() => { 
+        if (inputArab && !inputArab.value) {
+            inputArab.focus(); 
+        } else if (inputMelayu && !inputMelayu.value) {
+            inputMelayu.focus();
+        } else if (inputSorof) {
+            inputSorof.focus();
+        }
+    }, 100);
 }
 
 const btnCustomPromptOk = document.getElementById("btnCustomPromptOk");
