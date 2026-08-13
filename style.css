@@ -242,3 +242,53 @@ mark.admin-highlight {
     font-weight: bold;
     border-bottom: 2px solid #0284c7;
 }
+
+/* =========================================================
+   KOTAK DEFINISI KATA KUNCI DINAMIK (KAD AYAT)
+========================================================= */
+.keyword-definition-box {
+    display: none;
+    background-color: #ffffff;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+    text-align: left;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    animation: fadeIn 0.3s ease;
+}
+
+.keyword-definition-box.active {
+    display: block;
+}
+
+.kw-def-title {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px dashed var(--border-color);
+    padding-bottom: 8px;
+}
+
+.kw-def-ar {
+    font-family: var(--font-arabic);
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    font-weight: normal;
+}
+
+.kw-def-content {
+    font-size: 0.95rem;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
