@@ -324,6 +324,7 @@ function handleSearchAyatInput(e) {
 }
 searchAyatInput.addEventListener("input", handleSearchAyatInput);
 
+// PAPARAN AWAM: Kad Maklumat Ayat dengan Pengasingan Sorof & Nahu & Definisi Dinamik
 function renderSearchAyatCard() {
     resultsAyatList.innerHTML = "";
     if (!selectedAyatItem) {
@@ -399,6 +400,15 @@ function renderSearchAyatCard() {
             ${sorofHtml}
             ${nahuHtml}
             ${legacyHtml}
+
+            <!-- KOTAK DEFINISI DINAMIK -->
+            <div id="dynamicDefBox" class="keyword-definition-box">
+                <div class="kw-def-title">
+                    <span id="defTitleMs"></span>
+                    <span id="defTitleAr" class="kw-def-ar"></span>
+                </div>
+                <div id="defContent" class="kw-def-content"></div>
+            </div>
         </div>`;
     }
 
@@ -418,6 +428,12 @@ function renderSearchAyatCard() {
         
     resultsAyatList.appendChild(card);
 
+    // DOM Elements untuk Kotak Definisi
+    const defBox = card.querySelector("#dynamicDefBox");
+    const defTitleMs = card.querySelector("#defTitleMs");
+    const defTitleAr = card.querySelector("#defTitleAr");
+    const defContent = card.querySelector("#defContent");
+
     const badgeElements = card.querySelectorAll(".badge-keyword");
     const highlightElements = card.querySelectorAll(".public-highlight");
     
@@ -427,14 +443,18 @@ function renderSearchAyatCard() {
             const targetType = badge.getAttribute("data-type"); 
             const isActive = badge.classList.contains("active");
             
+            // 1. Reset semua status aktif dan sembunyikan kotak definisi
             badgeElements.forEach(b => b.classList.remove("active"));
             highlightElements.forEach(h => {
                 h.classList.remove("active", "active-sorof", "active-nahu");
             });
+            if(defBox) defBox.classList.remove("active");
             
+            // 2. Jika lencana diklik (diaktifkan)
             if (!isActive) {
                 badge.classList.add("active");
                 
+                // Serlahkan perkataan di dalam ayat
                 highlightElements.forEach(h => {
                     let isMatch = false;
                     
@@ -448,6 +468,40 @@ function renderSearchAyatCard() {
                         else h.classList.add("active"); 
                     }
                 });
+
+                // 3. Tarik Definisi dari Kamus Istilah
+                if (defBox) {
+                    // Cari padanan nama di dalam dataIstilah (abaikan huruf besar/kecil)
+                    const termObj = dataIstilah.find(item => 
+                        item.title_ms.trim().toLowerCase() === targetKey.trim().toLowerCase()
+                    );
+                    
+                    if (termObj) {
+                        defTitleMs.textContent = termObj.title_ms;
+                        defTitleAr.textContent = termObj.title_ar || "";
+                        
+                        // Menukar garis tepi warna mengikut disiplin ilmu
+                        if (targetType === 'sorof') defBox.style.borderLeftColor = "#059669";
+                        else if (targetType === 'nahu') defBox.style.borderLeftColor = "#0284c7";
+                        else defBox.style.borderLeftColor = "var(--accent-color)";
+
+                        // Paparkan definisi (atau nota jika kosong)
+                        let defText = termObj.definition 
+                            ? sanitizeHtml(termObj.definition).replace(/\n/g, "<br>") 
+                            : "<i>Tiada penerangan khusus disediakan di dalam Kamus Istilah.</i>";
+                        
+                        defContent.innerHTML = defText;
+                    } else {
+                        // Jika kata kunci tiada dalam Kamus Istilah (mungkin ditaip secara manual oleh admin)
+                        defTitleMs.textContent = targetKey;
+                        defTitleAr.textContent = "";
+                        defBox.style.borderLeftColor = "#cbd5e0"; // Warna neutral kelabu
+                        defContent.innerHTML = `<i>Tiada rekod terperinci dijumpai di dalam Kamus Istilah.</i>`;
+                    }
+                    
+                    // Tunjukkan kotak
+                    defBox.classList.add("active");
+                }
             }
         });
     });
