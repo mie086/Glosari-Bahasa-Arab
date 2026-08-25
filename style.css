@@ -292,3 +292,25 @@ mark.admin-highlight {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Lencana Penomboran ('Adad) - Ungu */
+.badge-nombor {
+    background-color: #f3e8ff;
+    color: #7e22ce;
+    border-color: #e9d5ff;
+}
+.badge-nombor:hover { background-color: #e9d5ff; }
+.badge-nombor.active {
+    background-color: #9333ea;
+    color: #ffffff;
+    border-color: #7e22ce;
+    transform: scale(1.05);
+}
+
+/* Nyalaan (Highlight) untuk Penomboran */
+.public-highlight.active-nombor {
+    background-color: #e9d5ff;
+    color: #4c1d95;
+    font-weight: bold;
+    border-bottom: 2px solid #9333ea;
+}
