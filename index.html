@@ -35,8 +35,12 @@
                 </div>
                 <div class="suggestions-list" id="suggestionsList"></div>
             </div>
+            
+            <!-- Kad Carian akan keluar di sini (DINAIIKKAN KE ATAS) -->
+            <div id="resultsList"></div> 
+            
+            <!-- Senarai Indeks Abjad (DIPINDAHKAN KE BAWAH) -->
             <div id="alphabeticalDirectory"></div>
-            <div id="resultsList"></div>
         </section>
 
         <!-- SEKSYEN 2: Halaman Carian Koleksi Ayat -->
@@ -110,6 +114,8 @@
                                     <option value="">-- Pilih Kategori --</option>
                                     <option value="sorof">Ilmu Sorof (Morfologi)</option>
                                     <option value="nahu">Ilmu Nahu (Sintaksis)</option>
+                                    <!-- PILIHAN BAHARU -->
+                                    <option value="nombor">Penomboran ('Adad)</option> 
                                 </select>
                             </div>
                             <div class="form-group">
@@ -168,18 +174,20 @@
 
                         <div class="form-group">
                             <label>Senarai Kata Kunci Carian (Dijana Secara Automatik)</label>
-                            
-                            <!-- Menggunakan CSS form-grid sedia ada untuk paparan sebelah-menyebelah -->
-                            <div class="form-grid" style="gap: 8px;">
-                                <div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <!-- Kotak Sorof (Hijau) -->
+                                <div style="flex: 1; min-width: 140px;">
                                     <input type="text" id="kataKunciSorofAyat" class="form-control" placeholder="Morfologi (Sorof)..." readonly style="background-color: #f1f5f9; border-color: #a7f3d0; color: #047857; font-size: 0.85rem;">
                                 </div>
-                                <div>
+                                <!-- Kotak Nahu (Biru) -->
+                                <div style="flex: 1; min-width: 140px;">
                                     <input type="text" id="kataKunciNahuAyat" class="form-control" placeholder="Sintaksis (Nahu)..." readonly style="background-color: #f1f5f9; border-color: #bae6fd; color: #0369a1; font-size: 0.85rem;">
                                 </div>
+                                <!-- KOTAK BAHARU: Nombor (Ungu) -->
+                                <div style="flex: 1; min-width: 140px;">
+                                    <input type="text" id="kataKunciNomborAyat" class="form-control" placeholder="Penomboran ('Adad)..." readonly style="background-color: #f1f5f9; border-color: #e9d5ff; color: #7e22ce; font-size: 0.85rem;">
+                                </div>
                             </div>
-                            
-                            <!-- Input tersembunyi: Berfungsi untuk menggabungkan semua kata kunci dan menghantarnya ke Supabase -->
                             <input type="hidden" id="kataKunciAyat">
                         </div>
 
@@ -268,10 +276,16 @@
             <datalist id="senaraiSorof"></datalist>
         </div>
 
-        <div class="form-group" style="margin-bottom: 16px;">
+        <div class="form-group" style="margin-bottom: 12px;">
             <label style="font-size: 0.85rem; color: #0369a1;">3b. Kata Kunci Nahu (I'rab/Struktur)</label>
             <input type="text" id="promptKataKunciNahu" list="senaraiNahu" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #bae6fd;">
             <datalist id="senaraiNahu"></datalist>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label style="font-size: 0.85rem; color: #7e22ce;">3c. Kata Kunci Penomboran ('Adad)</label>
+            <input type="text" id="promptKataKunciNombor" list="senaraiNombor" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #e9d5ff;">
+            <datalist id="senaraiNombor"></datalist>
         </div>
         
         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: -8px; margin-bottom: 16px; font-style: italic;">
