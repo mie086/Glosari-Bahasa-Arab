@@ -853,11 +853,12 @@ function applyFormat(textareaId, type, colorValue = null) {
 }
 
 // =========================================================================
-// KESELAMATAN LOG MASUK & KAWALAN PAPARAN (UI DINAMIK)
+// KESELAMATAN LOG MASUK & KAWALAN PAPARAN (UI DINAMIK & KUKUH)
 // =========================================================================
 
-let jumlahPercubaanGagal = 0;
-let kunciLogMasukSehingga = 0;
+// 1. Simpanan Memori (sessionStorage) untuk menghalang bypass "Refresh"
+let jumlahPercubaanGagal = parseInt(sessionStorage.getItem("jpg") || "0");
+let kunciLogMasukSehingga = parseInt(sessionStorage.getItem("kls") || "0");
 let pemasaKiraanDetik;
 
 const loginMsgBox = document.getElementById("loginMessageAlert");
@@ -865,11 +866,19 @@ const loginBtn = loginForm.querySelector("button[type='submit']");
 const emailInput = document.getElementById("loginEmail");
 const passInput = document.getElementById("loginPassword");
 
+// Fungsi menyimpan status ke pelayar web supaya tahan sekiranya di-refresh
+function simpanStatusKunci() {
+    sessionStorage.setItem("jpg", jumlahPercubaanGagal);
+    sessionStorage.setItem("kls", kunciLogMasukSehingga);
+}
+
+// 2. Pembersihan Input secara default (Menghalang XSS untuk jangka masa panjang)
 function paparMesejLogMasuk(teks, jenis = "error") {
     if(!loginMsgBox) return;
     loginMsgBox.style.display = "block";
     loginMsgBox.className = jenis === "error" ? "alert-error" : "alert-warning";
-    loginMsgBox.innerHTML = teks;
+    // Menggunakan DOMPurify (sanitizeHtml) yang sedia ada untuk membenarkan <strong> & <br> tetapi menyekat skrip jahat
+    loginMsgBox.innerHTML = sanitizeHtml(teks); 
 }
 
 function mulakanKiraanDetik() {
@@ -887,6 +896,7 @@ function mulakanKiraanDetik() {
             clearInterval(pemasaKiraanDetik);
             jumlahPercubaanGagal = 0;
             kunciLogMasukSehingga = 0;
+            simpanStatusKunci(); // Reset sessionStorage
             
             loginMsgBox.style.display = "none";
             loginBtn.disabled = false;
@@ -903,10 +913,15 @@ function mulakanKiraanDetik() {
     paparMesejLogMasuk(`Sistem dikunci sementara untuk keselamatan.<br>Sila tunggu <strong>${bakiSaat} saat</strong>.`, "warning");
 }
 
+// Jika tab dibuka semula dan sistem masih dalam tempoh kunci, terus mulakan kiraan detik
+if (Date.now() < kunciLogMasukSehingga) {
+    mulakanKiraanDetik();
+}
+
 loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     
-    // 1. Semak jika sistem sedang dikunci (Rate-limiting)
+    // Semak jika sistem sedang dikunci
     if (Date.now() < kunciLogMasukSehingga) {
         mulakanKiraanDetik();
         return;
@@ -919,7 +934,7 @@ loginForm.addEventListener("submit", async (e) => {
     loginBtn.disabled = true;
     loginBtn.textContent = "Log Masuk...";
 
-    // 2. Pengesahan terus ke Backend Supabase (Lebih Selamat)
+    // Pengesahan Backend Supabase
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     
     // Kembalikan butang ke asal
@@ -929,15 +944,20 @@ loginForm.addEventListener("submit", async (e) => {
     if (error) { 
         jumlahPercubaanGagal++;
         if (jumlahPercubaanGagal >= 3) {
-            kunciLogMasukSehingga = Date.now() + 60000; // Kunci log masuk selama 1 minit
+            kunciLogMasukSehingga = Date.now() + 60000; // Kunci selama 1 minit
+            simpanStatusKunci(); // Simpan kunci ke sessionStorage
             mulakanKiraanDetik();
         } else {
+            simpanStatusKunci(); // Simpan rekod gagal ke sessionStorage
             paparMesejLogMasuk(`E-mel atau kata laluan tidak sah.<br>Baki percubaan anda: <strong>${3 - jumlahPercubaanGagal} kali</strong>`, "error");
         }
     } 
     else { 
-        // Berjaya log masuk
+        // Berjaya log masuk, bersihkan semua rekod sekatan
         jumlahPercubaanGagal = 0;
+        kunciLogMasukSehingga = 0;
+        simpanStatusKunci();
+        
         if(loginMsgBox) loginMsgBox.style.display = "none";
         updateAdminUI(data.session); 
     }
