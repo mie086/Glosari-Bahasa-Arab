@@ -11,7 +11,6 @@ const SAFE_HTML_CONFIG = {
         "b", "strong", "i", "em", "u", "span", "br", "ul", "ol", "li",
         "mark", "div", "table", "thead", "tbody", "tr", "th", "td"
     ],
-    // Didaftarkan data-nombor
     ALLOWED_ATTR: ["class", "data-key", "data-sorof", "data-nahu", "data-nombor", "title", "style"],
     FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "svg", "math"],
     FORBID_ATTR: [
@@ -432,15 +431,16 @@ if (btnCustomPromptOk) {
         const regexArab = new RegExp(`(${escapeRegExp(perkataanArab)})`);
         let regexMelayu = null;
 
+        // PENAMBAHBAIKAN KESELAMATAN: Sanitasi amaran (Alert Escaping)
         if (!regexArab.test(editorArab.innerHTML)) {
-            alert(`Ralat: Perkataan Arab "${perkataanArab}" tidak dijumpai di dalam teks editor Arab. Sila periksa ejaan.`);
+            alert(`Ralat: Perkataan Arab "${escapeHtml(perkataanArab)}" tidak dijumpai di dalam teks editor Arab. Sila periksa ejaan.`);
             return; 
         }
 
         if (perkataanMelayu !== "") {
             regexMelayu = new RegExp(`(${escapeRegExp(perkataanMelayu)})`);
             if (!regexMelayu.test(editorMelayu.innerHTML)) {
-                alert(`Ralat: Terjemahan "${perkataanMelayu}" tidak dijumpai di dalam teks editor Melayu.`);
+                alert(`Ralat: Terjemahan "${escapeHtml(perkataanMelayu)}" tidak dijumpai di dalam teks editor Melayu.`);
                 return; 
             }
         }
@@ -648,15 +648,9 @@ searchInput.addEventListener("input", handleSearchInput);
 
 function renderSearchCard() {
     resultsList.innerHTML = "";
-    if (!selectedSearchItem) { 
-        resultsList.innerHTML = `
-            <div class="welcome-message" style="margin-bottom: 24px;">
-                <strong>Selamat Datang!</strong><br>Sila taip nama terma di atas atau pilih daripada indeks abjad untuk memaparkan pilihan carian.
-            </div>`; 
-        return; 
-    }
+    if (!selectedSearchItem) { resultsList.innerHTML = `<div class="welcome-message" style="margin-bottom: 24px;"><strong>Selamat Datang!</strong><br>Sila taip nama terma di atas atau pilih daripada indeks abjad untuk memaparkan pilihan carian.</div>`; return; }
 
-    const card = document.createElement("div"); card.className = "card"; card.style.marginBottom = "32px"; // Tambah jarak bawah supaya tidak rapat dengan direktori abjad
+    const card = document.createElement("div"); card.className = "card"; card.style.marginBottom = "32px";
     
     let formattedCharacteristics = "";
     if (selectedSearchItem.characteristics && selectedSearchItem.characteristics.length > 0) {
@@ -700,7 +694,6 @@ function renderSearchCard() {
     else if (selectedSearchItem.disiplin_ilmu === 'nombor') paparanKategori = 'Penomboran';
 
     card.innerHTML = `<div class="card-header"><div class="card-title-group"><div class="title-ms">${escapeHtml(selectedSearchItem.title_ms)}</div>${paparanKategori ? `<span class="category-badge">${escapeHtml(paparanKategori)}</span>` : ''}</div><div class="title-ar">${escapeHtml(selectedSearchItem.title_ar)}</div></div><div class="card-body"><div class="definition">${formattedDefinition}</div><div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>${legacyStandaloneTableHtml}</div>`;
-    
     resultsList.appendChild(card);
 }
 
@@ -859,13 +852,112 @@ function applyFormat(textareaId, type, colorValue = null) {
     textarea.focus(); textarea.selectionStart = start; textarea.selectionEnd = start + modifiedText.length; textarea.dispatchEvent(new Event('input'));
 }
 
-async function checkUserSession() { const { data: { session } } = await supabaseClient.auth.getSession(); updateAdminUI(session); }
-function updateAdminUI(session) {
-    if (session) { adminAuthBox.style.display = "none"; adminDashboardBox.style.display = "block"; renderAdminList(); renderAdminAyatList(); } 
-    else { adminAuthBox.style.display = "block"; adminDashboardBox.style.display = "none"; }
+// =========================================================================
+// KESELAMATAN LOG MASUK & KAWALAN PAPARAN (UI DINAMIK)
+// =========================================================================
+
+let jumlahPercubaanGagal = 0;
+let kunciLogMasukSehingga = 0;
+let pemasaKiraanDetik;
+
+const loginMsgBox = document.getElementById("loginMessageAlert");
+const loginBtn = loginForm.querySelector("button[type='submit']");
+const emailInput = document.getElementById("loginEmail");
+const passInput = document.getElementById("loginPassword");
+
+function paparMesejLogMasuk(teks, jenis = "error") {
+    if(!loginMsgBox) return;
+    loginMsgBox.style.display = "block";
+    loginMsgBox.className = jenis === "error" ? "alert-error" : "alert-warning";
+    loginMsgBox.innerHTML = teks;
 }
 
-loginForm.addEventListener("submit", async (e) => { e.preventDefault(); const { data, error } = await supabaseClient.auth.signInWithPassword({ email: document.getElementById("loginEmail").value, password: document.getElementById("loginPassword").value }); if (error) alert("Gagal Log Masuk: " + error.message); else updateAdminUI(data.session); });
+function mulakanKiraanDetik() {
+    loginBtn.disabled = true;
+    emailInput.disabled = true;
+    passInput.disabled = true;
+    loginBtn.style.opacity = "0.5";
+
+    clearInterval(pemasaKiraanDetik); 
+
+    pemasaKiraanDetik = setInterval(() => {
+        const bakiMs = kunciLogMasukSehingga - Date.now();
+        
+        if (bakiMs <= 0) {
+            clearInterval(pemasaKiraanDetik);
+            jumlahPercubaanGagal = 0;
+            kunciLogMasukSehingga = 0;
+            
+            loginMsgBox.style.display = "none";
+            loginBtn.disabled = false;
+            emailInput.disabled = false;
+            passInput.disabled = false;
+            loginBtn.style.opacity = "1";
+        } else {
+            const bakiSaat = Math.ceil(bakiMs / 1000);
+            paparMesejLogMasuk(`Sistem dikunci sementara untuk keselamatan.<br>Sila tunggu <strong>${bakiSaat} saat</strong>.`, "warning");
+        }
+    }, 1000);
+
+    const bakiSaat = Math.ceil((kunciLogMasukSehingga - Date.now()) / 1000);
+    paparMesejLogMasuk(`Sistem dikunci sementara untuk keselamatan.<br>Sila tunggu <strong>${bakiSaat} saat</strong>.`, "warning");
+}
+
+loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    // 1. Semak jika sistem sedang dikunci (Rate-limiting)
+    if (Date.now() < kunciLogMasukSehingga) {
+        mulakanKiraanDetik();
+        return;
+    }
+
+    const email = emailInput.value.trim();
+    const password = passInput.value;
+
+    // Paparkan status 'Loading'
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Log Masuk...";
+
+    // 2. Pengesahan terus ke Backend Supabase (Lebih Selamat)
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    
+    // Kembalikan butang ke asal
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Log Masuk";
+
+    if (error) { 
+        jumlahPercubaanGagal++;
+        if (jumlahPercubaanGagal >= 3) {
+            kunciLogMasukSehingga = Date.now() + 60000; // Kunci log masuk selama 1 minit
+            mulakanKiraanDetik();
+        } else {
+            paparMesejLogMasuk(`E-mel atau kata laluan tidak sah.<br>Baki percubaan anda: <strong>${3 - jumlahPercubaanGagal} kali</strong>`, "error");
+        }
+    } 
+    else { 
+        // Berjaya log masuk
+        jumlahPercubaanGagal = 0;
+        if(loginMsgBox) loginMsgBox.style.display = "none";
+        updateAdminUI(data.session); 
+    }
+});
+
+async function checkUserSession() { const { data: { session } } = await supabaseClient.auth.getSession(); updateAdminUI(session); }
+
+function updateAdminUI(session) {
+    if (session) { 
+        adminAuthBox.style.display = "none"; 
+        adminDashboardBox.style.display = "block"; 
+        renderAdminList(); 
+        renderAdminAyatList(); 
+    } 
+    else { 
+        adminAuthBox.style.display = "block"; 
+        adminDashboardBox.style.display = "none"; 
+    }
+}
+
 btnLogKeluar.addEventListener("click", async () => { await supabaseClient.auth.signOut(); updateAdminUI(null); });
 supabaseClient.auth.onAuthStateChange((_event, session) => { updateAdminUI(session); });
 
