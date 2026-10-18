@@ -339,3 +339,215 @@ mark.admin-highlight {
     color: #7e22ce;
     border: 1px solid #d8b4fe;
 }
+
+/* =========================================================
+   MOD HAFALAN (FLASHCARDS 3D) & LATIHAN KUIZ AWAM
+========================================================= */
+.nav-tabs {
+    flex-wrap: wrap;
+}
+
+.hafalan-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.hafalan-stats-bar {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.progress-track {
+    width: 100%;
+    height: 10px;
+    background-color: #edf2f7;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: var(--success-color);
+    transition: width 0.3s ease;
+}
+
+.flashcard-Scene {
+    perspective: 1000px;
+    width: 100%;
+    min-height: 290px;
+    cursor: pointer;
+    margin-bottom: 16px;
+}
+
+.flashcard-inner {
+    position: relative;
+    width: 100%;
+    min-height: 290px;
+    transition: transform 0.55s cubic-bezier(0.4, 0.2, 0.2, 1);
+    transform-style: preserve-3d;
+}
+
+.flashcard-inner.is-flipped {
+    transform: rotateY(180deg);
+}
+
+.flashcard-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.flashcard-back {
+    transform: rotateY(180deg);
+    background-color: #f8fafc;
+    border-color: var(--accent-color);
+}
+
+.flashcard-top-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flashcard-center-content {
+    text-align: center;
+    margin: auto 0;
+    padding: 16px 0;
+}
+
+.flashcard-arabic {
+    font-family: var(--font-arabic);
+    font-size: 2.3rem;
+    color: var(--accent-color);
+    direction: rtl;
+    line-height: 1.7;
+    margin-bottom: 8px;
+}
+
+.flashcard-ms {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.flashcard-back-text {
+    font-size: 1.05rem;
+    color: var(--text-color);
+    line-height: 1.7;
+    max-height: 170px;
+    overflow-y: auto;
+}
+
+.flashcard-hint {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.flashcard-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Gaya Pilihan Kuiz Awam */
+.quiz-options-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+@media (min-width: 600px) {
+    .quiz-options-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.quiz-opt-btn {
+    padding: 14px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    background-color: var(--card-bg);
+    color: var(--primary-color);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.quiz-opt-btn:hover:not(:disabled) {
+    border-color: var(--accent-color);
+    background-color: #f0f9ff;
+}
+
+.quiz-opt-btn.opt-correct {
+    background-color: #d1fae5 !important;
+    border-color: #059669 !important;
+    color: #065f46 !important;
+}
+
+.quiz-opt-btn.opt-wrong {
+    background-color: #fee2e2 !important;
+    border-color: #dc2626 !important;
+    color: #991b1b !important;
+}
+
+/* Gaya Padanan Pasangan Interaktif */
+.padanan-interactive-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.padanan-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.padanan-item-btn {
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--card-bg);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.padanan-item-btn.selected {
+    border-color: #8b5cf6;
+    background-color: #f3e8ff;
+    color: #6d28d9;
+}
+
+.padanan-item-btn.matched {
+    border-color: #10b981;
+    background-color: #d1fae5;
+    color: #047857;
+    opacity: 0.75;
+    cursor: default;
+}
+
+.padanan-item-btn.wrong-shake {
+    border-color: #ef4444;
+    background-color: #fee2e2;
+    color: #b91c1c;
+}
