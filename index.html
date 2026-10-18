@@ -5,24 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <!-- Keselamatan CSP untuk membenarkan CDN dan Supabase -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ejivaczazdimurhtlmsj.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ejivaczazdimurhtlmsj.supabase.co https://cdn.jsdelivr.net; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'">
     <title>Sistem Istilah Bahasa Arab</title>
     
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
 <div class="container">
     <header>
         <h1>Kamus Istilah & Koleksi Ayat</h1>
-        <p>Bahasa Arab</p>
+        <p>Bahasa Arab (Nahu, Sorof & 'Adad)</p>
     </header>
 
     <nav class="nav-tabs">
         <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">Kamus Istilah</button>
         <button class="nav-btn" id="tabAyat" data-target="sectionAyat">Koleksi Ayat</button>
+        <button class="nav-btn" id="tabHafalan" data-target="sectionHafalan">Mod Hafalan</button>
+        <button class="nav-btn" id="tabKuiz" data-target="sectionKuiz">Latihan Kuiz</button>
         <button class="nav-btn" id="tabAdmin" data-target="sectionAdmin">Panel Admin</button>
     </nav>
 
@@ -36,10 +38,7 @@
                 <div class="suggestions-list" id="suggestionsList"></div>
             </div>
             
-            <!-- Kad Carian akan keluar di sini (DINAIIKKAN KE ATAS) -->
             <div id="resultsList"></div> 
-            
-            <!-- Senarai Indeks Abjad (DIPINDAHKAN KE BAWAH) -->
             <div id="alphabeticalDirectory"></div>
         </section>
 
@@ -58,7 +57,82 @@
             </div>
         </section>
 
-        <!-- SEKSYEN 3: Panel Admin -->
+        <!-- SEKSYEN 3: Halaman Mod Hafalan (Flashcards) -->
+        <section id="sectionHafalan" class="view-section">
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="hafalan-controls">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
+                        <label for="hafalanSumber">Sumber Hafalan</label>
+                        <select id="hafalanSumber" class="form-control">
+                            <option value="istilah">Kamus Istilah</option>
+                            <option value="ayat">Koleksi Ayat</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="hafalanKategoriGroup" style="margin-bottom: 0; flex: 1; min-width: 160px;">
+                        <label for="hafalanKategori">Kategori Ilmu</label>
+                        <select id="hafalanKategori" class="form-control">
+                            <option value="semua">Semua Kategori</option>
+                            <option value="sorof">Ilmu Sorof (Morfologi)</option>
+                            <option value="nahu">Ilmu Nahu (Sintaksis)</option>
+                            <option value="nombor">Penomboran ('Adad)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: flex-end;">
+                        <button type="button" class="btn btn-primary" id="btnKocokHafalan" title="Susun Rawak">🔀 Kocok Kad</button>
+                        <button type="button" class="btn btn-secondary" id="btnResetHafalan" title="Mula Semula">🔄 Reset</button>
+                    </div>
+                </div>
+
+                <!-- Bar Kemajuan Hafalan -->
+                <div class="hafalan-stats-bar">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px;">
+                        <span id="hafalanCounterText">Kad 0 / 0</span>
+                        <span style="color: var(--success-color);">✔ Dikuasai: <span id="hafalanMasteredCount">0</span></span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="hafalanProgressFill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kawasan Kad Imbasan -->
+            <div id="flashcardArea"></div>
+        </section>
+
+        <!-- SEKSYEN 4: Halaman Latihan Kuiz Awam -->
+        <section id="sectionKuiz" class="view-section">
+            <div class="card" style="margin-bottom: 20px;">
+                <div class="hafalan-controls">
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
+                        <label for="filterKategoriKuizAwam">Kategori Kuiz</label>
+                        <select id="filterKategoriKuizAwam" class="form-control">
+                            <option value="semua">Semua Kategori</option>
+                            <option value="sorof">Ilmu Sorof (Morfologi)</option>
+                            <option value="nahu">Ilmu Nahu (Sintaksis)</option>
+                            <option value="nombor">Penomboran ('Adad)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
+                        <label for="filterJenisKuizAwam">Format Soalan</label>
+                        <select id="filterJenisKuizAwam" class="form-control">
+                            <option value="semua">Semua Format</option>
+                            <option value="pilihan">Aneka Pilihan</option>
+                            <option value="betul_salah">Betul / Salah</option>
+                            <option value="isi_kosong">Isi Tempat Kosong</option>
+                            <option value="padanan">Padanan Pasangan</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button type="button" class="btn btn-primary" id="btnMulaKuizAwam" style="background-color: #8b5cf6;">▶ Mula / Ulang Kuiz</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kontena Soalan & Keputusan Kuiz -->
+            <div id="publicQuizContainer"></div>
+        </section>
+
+        <!-- SEKSYEN 5: Panel Admin -->
         <section id="sectionAdmin" class="view-section">
             <!-- Borang Log Masuk -->
             <div id="adminAuthBox" style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-color); max-width: 400px; margin: 0 auto;">
@@ -86,9 +160,10 @@
                         <h3>Pangkalan Data Supabase SQL</h3>
                         <button id="btnLogKeluar" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem; margin-top: 4px;">Log Keluar</button>
                     </div>
-                    <div style="display: flex; gap: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="btn btn-primary" id="btnBukaBorang">+ Tambah Istilah</button>
                         <button class="btn btn-success" id="btnBukaBorangAyat">+ Tambah Ayat</button>
+                        <button class="btn btn-warning" id="btnBukaBorangKuiz" style="background-color: #8b5cf6; color: white;">+ Tambah Kuiz</button>
                     </div>
                 </div>
 
@@ -109,7 +184,6 @@
                             </div>
                         </div>
 
-                        <!-- KEMASKINI: Borang Istilah tanpa Kategori lama & Label Disiplin Ilmu ditukar kepada Kategori -->
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="disiplinIlmu">Kategori</label>
@@ -117,7 +191,6 @@
                                     <option value="">-- Pilih Kategori --</option>
                                     <option value="sorof">Ilmu Sorof (Morfologi)</option>
                                     <option value="nahu">Ilmu Nahu (Sintaksis)</option>
-                                    <!-- PILIHAN BAHARU -->
                                     <option value="nombor">Penomboran ('Adad)</option> 
                                 </select>
                             </div>
@@ -155,8 +228,7 @@
                 <div class="form-section" id="formAyatSection">
                     <h2 id="formAyatTitle">Tambah Koleksi Ayat Baru</h2>
                     
-                    <!-- Butang Induk Pautkan Ayat (Telah Diperkemas) -->
-                    <div style="background: #f8fafc; padding: 12px; border: 1px dashed var(--accent-color); border-radius: 8px; margin-bottom: 20px; display: flex; gap: 8px; align-items: center;">
+                    <div style="background: #f8fafc; padding: 12px; border: 1px dashed var(--accent-color); border-radius: 8px; margin-bottom: 20px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                         <span style="font-size: 0.9rem; font-weight: 600; color: var(--primary-color);">Tindakan Visual:</span>
                         <button type="button" class="btn btn-primary" data-highlight-action="add" style="padding: 6px 16px; font-size: 0.85rem;">🔗 Pautkan Perkataan (Sorof/Nahu)</button>
                         <button type="button" class="btn btn-danger" data-highlight-action="remove" style="padding: 6px 16px; font-size: 0.85rem;">❌ Buang Pautan Sedia Ada</button>
@@ -178,15 +250,12 @@
                         <div class="form-group">
                             <label>Senarai Kata Kunci Carian (Dijana Secara Automatik)</label>
                             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                <!-- Kotak Sorof (Hijau) -->
                                 <div style="flex: 1; min-width: 140px;">
                                     <input type="text" id="kataKunciSorofAyat" class="form-control" placeholder="Morfologi (Sorof)..." readonly style="background-color: #f1f5f9; border-color: #a7f3d0; color: #047857; font-size: 0.85rem;">
                                 </div>
-                                <!-- Kotak Nahu (Biru) -->
                                 <div style="flex: 1; min-width: 140px;">
                                     <input type="text" id="kataKunciNahuAyat" class="form-control" placeholder="Sintaksis (Nahu)..." readonly style="background-color: #f1f5f9; border-color: #bae6fd; color: #0369a1; font-size: 0.85rem;">
                                 </div>
-                                <!-- KOTAK BAHARU: Nombor (Ungu) -->
                                 <div style="flex: 1; min-width: 140px;">
                                     <input type="text" id="kataKunciNomborAyat" class="form-control" placeholder="Penomboran ('Adad)..." readonly style="background-color: #f1f5f9; border-color: #e9d5ff; color: #7e22ce; font-size: 0.85rem;">
                                 </div>
@@ -201,10 +270,56 @@
                     </form>
                 </div>
 
+                <!-- Borang: Tambah/Ubah Koleksi Kuiz -->
+                <div class="form-section" id="formKuizSection">
+                    <h2 id="formKuizTitle">Tambah Soalan Kuiz Baru</h2>
+                    <form id="kuizForm">
+                        <input type="hidden" id="kuizId">
+
+                        <div class="form-group">
+                            <label for="kuizTajuk">Soalan / Arahan</label>
+                            <textarea id="kuizTajuk" class="form-control" rows="2" placeholder="Contoh: Pilih wazan bagi perkataan كَتَبَ atau Tentukan hukum i'rab..." required></textarea>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="kuizKategori">Disiplin / Kategori</label>
+                                <select id="kuizKategori" class="form-control" required>
+                                    <option value="sorof">Ilmu Sorof (Morfologi)</option>
+                                    <option value="nahu">Ilmu Nahu (Sintaksis)</option>
+                                    <option value="nombor">Penomboran ('Adad)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="kuizJenis">Format Soalan</label>
+                                <select id="kuizJenis" class="form-control" required>
+                                    <option value="pilihan">Aneka Pilihan (4 Pilihan)</option>
+                                    <option value="betul_salah">Betul / Salah</option>
+                                    <option value="isi_kosong">Isi Tempat Kosong</option>
+                                    <option value="padanan">Padanan Pasangan</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="dynamicQuizBuilderBox" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 16px;"></div>
+
+                        <div class="form-group">
+                            <label for="kuizPenerangan">Penerangan / Nota Jawapan (Pilihan)</label>
+                            <textarea id="kuizPenerangan" class="form-control" rows="2" placeholder="Penerangan ini akan dipaparkan kepada pelajar selepas mereka menjawab soalan..."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" id="btnBatalKuiz">Batal</button>
+                            <button type="submit" class="btn btn-success">Simpan Soalan Kuiz</button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Penukar Paparan Jadual Panel Admin -->
-                <div style="margin-top: 32px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; display: flex; gap: 8px;">
+                <div style="margin-top: 32px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
                     <button class="btn btn-primary" id="btnTabJadualIstilah" style="flex: 1;">Paparkan Jadual Istilah</button>
                     <button class="btn btn-secondary" id="btnTabJadualAyat" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Ayat</button>
+                    <button class="btn btn-secondary" id="btnTabJadualKuiz" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Kuiz</button>
                 </div>
 
                 <!-- Pembungkus Jadual Istilah -->
@@ -248,6 +363,27 @@
                     </div>
                 </div>
 
+                <!-- Pembungkus Jadual Kuiz -->
+                <div id="jadualKuizWrapper" style="display: none;">
+                    <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+                        <h3 style="color: var(--primary-color); margin: 0;">Jadual Koleksi Kuiz</h3>
+                        <input type="text" id="adminSearchKuizInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari soalan, jenis, kategori...">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 45%;">Soalan</th>
+                                    <th style="width: 15%;">Format</th>
+                                    <th style="width: 15%;">Kategori</th>
+                                    <th style="width: 25%;">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableKuizBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </section>
     </main>
@@ -255,7 +391,7 @@
 
 <button type="button" class="floating-search-btn" id="btnFloatingSearch" title="Kembali ke Carian">🔍</button>
 
-<!-- KOTAK PROMPT KASTAM (Dikemaskini dengan Datalist Sorof & Nahu yang Bersih) -->
+<!-- KOTAK PROMPT KASTAM -->
 <div id="customPromptModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 9999;">
     <div style="background: var(--card-bg); padding: 24px; border-radius: 8px; width: 90%; max-width: 450px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
         
@@ -272,7 +408,6 @@
             <span style="font-size: 0.7rem; color: var(--text-muted);">Biarkan kosong jika tiada terjemahan langsung untuk perkataan ini.</span>
         </div>
 
-        <!-- Bahagian Kata Kunci Diasingkan dengan Datalist -->
         <div class="form-group" style="margin-bottom: 12px;">
             <label style="font-size: 0.85rem; color: #047857;">3a. Kata Kunci Sorof (Wazan/Bentuk)</label>
             <input type="text" id="promptKataKunciSorof" list="senaraiSorof" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #a7f3d0;">
@@ -302,6 +437,6 @@
     </div>
 </div>
 
-<script src="script.js?v=20260810-4"></script>
+<script src="script.js?v=20261018-audit"></script>
 </body>
 </html>
