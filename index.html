@@ -68,8 +68,10 @@
                             <option value="ayat">Koleksi Ayat</option>
                         </select>
                     </div>
+
+                    <!-- Muncul apabila Sumber = Kamus Istilah -->
                     <div class="form-group" id="hafalanKategoriGroup" style="margin-bottom: 0; flex: 1; min-width: 160px;">
-                        <label for="hafalanKategori">Kategori Ilmu</label>
+                        <label for="hafalanKategori">Pilihan Hafalan</label>
                         <select id="hafalanKategori" class="form-control">
                             <option value="semua">Semua Kategori</option>
                             <option value="sorof">Ilmu Sorof (Morfologi)</option>
@@ -77,8 +79,18 @@
                             <option value="nombor">Penomboran ('Adad)</option>
                         </select>
                     </div>
+
+                    <!-- Muncul apabila Sumber = Koleksi Ayat -->
+                    <div class="form-group" id="hafalanArahGroup" style="margin-bottom: 0; flex: 1; min-width: 180px; display: none;">
+                        <label for="hafalanArahAyat">Pilihan Hafalan</label>
+                        <select id="hafalanArahAyat" class="form-control">
+                            <option value="ar_ke_ms">Arab ➔ Melayu</option>
+                            <option value="ms_ke_ar">Melayu ➔ Arab</option>
+                        </select>
+                    </div>
+
                     <div style="display: flex; gap: 8px; align-items: flex-end;">
-                        <button type="button" class="btn btn-primary" id="btnKocokHafalan" title="Susun Rawak">🔀 Kocok Kad</button>
+                        <button type="button" class="btn btn-primary" id="btnRawakHafalan" title="Susun Rawak">🔀 Rawak</button>
                         <button type="button" class="btn btn-secondary" id="btnResetHafalan" title="Mula Semula">🔄 Reset</button>
                     </div>
                 </div>
