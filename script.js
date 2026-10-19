@@ -117,7 +117,9 @@ const resultsAyatList = document.getElementById("resultsAyatList");
 const hafalanSumber = document.getElementById("hafalanSumber");
 const hafalanKategori = document.getElementById("hafalanKategori");
 const hafalanKategoriGroup = document.getElementById("hafalanKategoriGroup");
-const btnKocokHafalan = document.getElementById("btnKocokHafalan");
+const hafalanArahAyat = document.getElementById("hafalanArahAyat");
+const hafalanArahGroup = document.getElementById("hafalanArahGroup");
+const btnRawakHafalan = document.getElementById("btnRawakHafalan");
 const btnResetHafalan = document.getElementById("btnResetHafalan");
 const hafalanCounterText = document.getElementById("hafalanCounterText");
 const hafalanMasteredCount = document.getElementById("hafalanMasteredCount");
@@ -312,9 +314,14 @@ function initHafalanDeck(shouldShuffle = false) {
     if (!hafalanSumber || !flashcardArea) return;
     const sumber = hafalanSumber.value;
     const kategori = hafalanKategori ? hafalanKategori.value : "semua";
+    const arahAyat = hafalanArahAyat ? hafalanArahAyat.value : "ar_ke_ms";
 
+    // Kawal paparan dropdown mengikut Sumber Hafalan
     if (hafalanKategoriGroup) {
         hafalanKategoriGroup.style.display = sumber === "istilah" ? "block" : "none";
+    }
+    if (hafalanArahGroup) {
+        hafalanArahGroup.style.display = sumber === "ayat" ? "block" : "none";
     }
 
     let rawList = [];
@@ -332,18 +339,37 @@ function initHafalanDeck(shouldShuffle = false) {
                     : "<i>Tiada definisi.</i>"
             }));
     } else {
-        rawList = dataAyat.map(item => ({
-            id: "ayat-" + item.id,
-            frontSub: "KOLEKSI AYAT ARAB",
-            frontMainAr: stripHtml(item.ayat_ar),
-            frontMainMs: "",
-            backTitle: "Terjemahan Bahasa Melayu",
-            backContentHtml:
-                `<div style="font-size: 1.15rem; font-weight: 600; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
-                (item.kata_kunci
-                    ? `<div style="margin-top: 12px; font-size: 0.8rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
-                    : "")
-        }));
+        rawList = dataAyat.map(item => {
+            const notaKataKunci = item.kata_kunci
+                ? `<div style="margin-top: 12px; font-size: 0.8rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
+                : "";
+
+            // Pilihan 1: Teka daripada Bahasa Melayu -> Bahasa Arab
+            if (arahAyat === "ms_ke_ar") {
+                return {
+                    id: "ayat-" + item.id,
+                    frontSub: "TERJEMAHAN MELAYU ➔ ARAB",
+                    frontMainAr: "",
+                    frontMainMs: stripHtml(item.terjemahan_ms),
+                    backTitle: "Ayat Bahasa Arab",
+                    backContentHtml:
+                        `<div style="font-family: var(--font-arabic); font-size: 2.1rem; color: var(--accent-color); direction: rtl; line-height: 1.8;">${sanitizeHtml(item.ayat_ar)}</div>` +
+                        notaKataKunci
+                };
+            }
+
+            // Pilihan 2 (Default): Teka daripada Bahasa Arab -> Bahasa Melayu
+            return {
+                id: "ayat-" + item.id,
+                frontSub: "AYAT ARAB ➔ MELAYU",
+                frontMainAr: stripHtml(item.ayat_ar),
+                frontMainMs: "",
+                backTitle: "Terjemahan Bahasa Melayu",
+                backContentHtml:
+                    `<div style="font-size: 1.15rem; font-weight: 600; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
+                    notaKataKunci
+            };
+        });
     }
 
     hafalanDeck = shouldShuffle ? shuffleArray(rawList) : rawList;
@@ -387,7 +413,7 @@ function renderFlashcard() {
                             : '<span class="badge" style="background:#fef3c7; color:#b45309;">Belum Dihafal</span>'}
                     </div>
                     <div class="flashcard-center-content">
-                        <div class="flashcard-arabic">${escapeHtml(currentCard.frontMainAr)}</div>
+                        ${currentCard.frontMainAr ? `<div class="flashcard-arabic">${escapeHtml(currentCard.frontMainAr)}</div>` : ""}
                         ${currentCard.frontMainMs ? `<div class="flashcard-ms">${escapeHtml(currentCard.frontMainMs)}</div>` : ""}
                     </div>
                     <div class="flashcard-hint">👆 Klik kad untuk lihat jawapan / maksud</div>
@@ -465,7 +491,8 @@ function renderFlashcard() {
 
 if (hafalanSumber) hafalanSumber.addEventListener("change", () => initHafalanDeck(false));
 if (hafalanKategori) hafalanKategori.addEventListener("change", () => initHafalanDeck(false));
-if (btnKocokHafalan) btnKocokHafalan.addEventListener("click", () => initHafalanDeck(true));
+if (hafalanArahAyat) hafalanArahAyat.addEventListener("change", () => initHafalanDeck(false));
+if (btnRawakHafalan) btnRawakHafalan.addEventListener("click", () => initHafalanDeck(true));
 if (btnResetHafalan) {
     btnResetHafalan.addEventListener("click", () => {
         hafalanMasteredIds.clear();
