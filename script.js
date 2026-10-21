@@ -348,10 +348,10 @@ function initHafalanDeck(shouldShuffle = false) {
             if (arahAyat === "ms_ke_ar") {
                 return {
                     id: "ayat-" + item.id,
-                    frontSub: "TERJEMAHAN MELAYU ➔ ARAB",
+                    frontSub: "Bahasa Melayu",
                     frontMainAr: "",
                     frontMainMs: stripHtml(item.terjemahan_ms),
-                    backTitle: "Ayat Bahasa Arab",
+                    backTitle: "Bahasa Arab",
                     backContentHtml:
                         `<div style="font-family: var(--font-arabic); font-size: 2.1rem; color: var(--accent-color); direction: rtl; line-height: 1.8;">${sanitizeHtml(item.ayat_ar)}</div>` +
                         notaKataKunci
@@ -361,10 +361,10 @@ function initHafalanDeck(shouldShuffle = false) {
             // Pilihan 2 (Default): Teka daripada Bahasa Arab -> Bahasa Melayu
             return {
                 id: "ayat-" + item.id,
-                frontSub: "AYAT ARAB ➔ MELAYU",
+                frontSub: "Bahsa Arab",
                 frontMainAr: stripHtml(item.ayat_ar),
                 frontMainMs: "",
-                backTitle: "Terjemahan Bahasa Melayu",
+                backTitle: "Bahasa Melayu",
                 backContentHtml:
                     `<div style="font-size: 1.15rem; font-weight: 600; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
                     notaKataKunci
