@@ -24,7 +24,6 @@
         <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">Kamus Istilah</button>
         <button class="nav-btn" id="tabAyat" data-target="sectionAyat">Koleksi Ayat</button>
         <button class="nav-btn" id="tabHafalan" data-target="sectionHafalan">Mod Hafalan</button>
-        <button class="nav-btn" id="tabKuiz" data-target="sectionKuiz">Latihan Kuiz</button>
         <button class="nav-btn" id="tabAdmin" data-target="sectionAdmin">Panel Admin</button>
     </nav>
 
@@ -61,16 +60,18 @@
         <section id="sectionHafalan" class="view-section">
             <div class="card" style="margin-bottom: 20px;">
                 <div class="hafalan-controls">
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
+                    <!-- 1. Sumber Hafalan (Kiri) -->
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                         <label for="hafalanSumber">Sumber Hafalan</label>
                         <select id="hafalanSumber" class="form-control">
                             <option value="istilah">Kamus Istilah</option>
                             <option value="ayat">Koleksi Ayat</option>
+                            <option value="quran">Hafalan Al-Quran</option>
                         </select>
                     </div>
 
-                    <!-- Muncul apabila Sumber = Kamus Istilah -->
-                    <div class="form-group" id="hafalanKategoriGroup" style="margin-bottom: 0; flex: 1; min-width: 160px;">
+                    <!-- 2a. Muncul apabila Sumber = Kamus Istilah -->
+                    <div class="form-group" id="hafalanKategoriGroup" style="margin-bottom: 0; flex: 1; min-width: 150px;">
                         <label for="hafalanKategori">Pilihan Hafalan</label>
                         <select id="hafalanKategori" class="form-control">
                             <option value="semua">Semua Kategori</option>
@@ -80,8 +81,16 @@
                         </select>
                     </div>
 
-                    <!-- Muncul apabila Sumber = Koleksi Ayat -->
-                    <div class="form-group" id="hafalanArahGroup" style="margin-bottom: 0; flex: 1; min-width: 180px; display: none;">
+                    <!-- 2b. Muncul di TENGAH apabila Sumber = Hafalan Al-Quran -->
+                    <div class="form-group" id="hafalanSurahGroup" style="margin-bottom: 0; flex: 1; min-width: 160px; display: none;">
+                        <label for="hafalanSurah">Pilihan Surah</label>
+                        <select id="hafalanSurah" class="form-control">
+                            <option value="semua">Semua Surah</option>
+                        </select>
+                    </div>
+
+                    <!-- 3. Muncul apabila Sumber = Koleksi Ayat ATAU Hafalan Al-Quran -->
+                    <div class="form-group" id="hafalanArahGroup" style="margin-bottom: 0; flex: 1; min-width: 150px; display: none;">
                         <label for="hafalanArahAyat">Pilihan Hafalan</label>
                         <select id="hafalanArahAyat" class="form-control">
                             <option value="ar_ke_ms">Arab ➔ Melayu</option>
@@ -89,6 +98,7 @@
                         </select>
                     </div>
 
+                    <!-- 4. Butang Tindakan (Kanan) -->
                     <div style="display: flex; gap: 8px; align-items: flex-end;">
                         <button type="button" class="btn btn-primary" id="btnRawakHafalan" title="Susun Rawak">🔀 Rawak</button>
                         <button type="button" class="btn btn-secondary" id="btnResetHafalan" title="Mula Semula">🔄 Reset</button>
@@ -111,47 +121,12 @@
             <div id="flashcardArea"></div>
         </section>
 
-        <!-- SEKSYEN 4: Halaman Latihan Kuiz Awam -->
-        <section id="sectionKuiz" class="view-section">
-            <div class="card" style="margin-bottom: 20px;">
-                <div class="hafalan-controls">
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
-                        <label for="filterKategoriKuizAwam">Kategori Kuiz</label>
-                        <select id="filterKategoriKuizAwam" class="form-control">
-                            <option value="semua">Semua Kategori</option>
-                            <option value="sorof">Ilmu Sorof (Morfologi)</option>
-                            <option value="nahu">Ilmu Nahu (Sintaksis)</option>
-                            <option value="nombor">Penomboran ('Adad)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
-                        <label for="filterJenisKuizAwam">Format Soalan</label>
-                        <select id="filterJenisKuizAwam" class="form-control">
-                            <option value="semua">Semua Format</option>
-                            <option value="pilihan">Aneka Pilihan</option>
-                            <option value="betul_salah">Betul / Salah</option>
-                            <option value="isi_kosong">Isi Tempat Kosong</option>
-                            <option value="padanan">Padanan Pasangan</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; align-items: flex-end;">
-                        <button type="button" class="btn btn-primary" id="btnMulaKuizAwam" style="background-color: #8b5cf6;">▶ Mula / Ulang Kuiz</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kontena Soalan & Keputusan Kuiz -->
-            <div id="publicQuizContainer"></div>
-        </section>
-
-        <!-- SEKSYEN 5: Panel Admin -->
+        <!-- SEKSYEN 4: Panel Admin -->
         <section id="sectionAdmin" class="view-section">
             <!-- Borang Log Masuk -->
             <div id="adminAuthBox" style="background: var(--card-bg); padding: 24px; border-radius: var(--radius); border: 1px solid var(--border-color); max-width: 400px; margin: 0 auto;">
                 <h3 style="margin-bottom: 12px; color: var(--primary-color);">Log Masuk Pentadbir</h3>
-
                 <div id="loginMessageAlert" style="display: none;"></div>
-                
                 <form id="loginForm">
                     <div class="form-group">
                         <label>E-mel Admin</label>
@@ -175,7 +150,7 @@
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="btn btn-primary" id="btnBukaBorang">+ Tambah Istilah</button>
                         <button class="btn btn-success" id="btnBukaBorangAyat">+ Tambah Ayat</button>
-                        <button class="btn btn-warning" id="btnBukaBorangKuiz" style="background-color: #8b5cf6; color: white;">+ Tambah Kuiz</button>
+                        <button class="btn btn-primary" id="btnBukaBorangQuran" style="background-color: #0d9488;">+ Tambah Ayat Al-Quran</button>
                     </div>
                 </div>
 
@@ -282,47 +257,60 @@
                     </form>
                 </div>
 
-                <!-- Borang: Tambah/Ubah Koleksi Kuiz -->
-                <div class="form-section" id="formKuizSection">
-                    <h2 id="formKuizTitle">Tambah Soalan Kuiz Baru</h2>
-                    <form id="kuizForm">
-                        <input type="hidden" id="kuizId">
+                <!-- Borang: Tambah/Ubah Hafalan Al-Quran -->
+                <div class="form-section" id="formQuranSection">
+                    <h2 id="formQuranTitle">Tambah Ayat Al-Quran Baru</h2>
+                    <form id="quranForm">
+                        <input type="hidden" id="quranId">
+
+                        <div style="display: grid; grid-template-columns: 110px 1fr 120px; gap: 10px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="quranNoSurah">No. Surah</label>
+                                <input type="number" id="quranNoSurah" class="form-control" min="1" max="114" placeholder="1 - 114" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="quranSurah">Nama Surah</label>
+                                <input type="text" id="quranSurah" list="senaraiSurahAdmin" class="form-control" placeholder="Contoh: Al-Baqarah / Al-Mulk" required>
+                                <datalist id="senaraiSurahAdmin"></datalist>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="quranNoAyat">No. Ayat</label>
+                                <input type="text" id="quranNoAyat" class="form-control" placeholder="cth: 255 / 1-5" required>
+                            </div>
+                        </div>
 
                         <div class="form-group">
-                            <label for="kuizTajuk">Soalan / Arahan</label>
-                            <textarea id="kuizTajuk" class="form-control" rows="2" placeholder="Contoh: Pilih wazan bagi perkataan كَتَبَ atau Tentukan hukum i'rab..." required></textarea>
+                            <label for="quranAyatAr">Potongan / Ayat Al-Quran (Bahasa Arab)</label>
+                            <textarea id="quranAyatAr" class="form-control arabic-input" rows="3" placeholder="Masukkan teks ayat Al-Quran..." required></textarea>
                         </div>
 
                         <div class="form-grid">
                             <div class="form-group">
-                                <label for="kuizKategori">Disiplin / Kategori</label>
-                                <select id="kuizKategori" class="form-control" required>
-                                    <option value="sorof">Ilmu Sorof (Morfologi)</option>
-                                    <option value="nahu">Ilmu Nahu (Sintaksis)</option>
-                                    <option value="nombor">Penomboran ('Adad)</option>
-                                </select>
+                                <label for="quranMaknaMudah" style="color: #047857;">1. Makna Mudah Difahami (Bahasa Melayu)</label>
+                                <div class="text-toolbar">
+                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaMudah" data-format="b">B</button>
+                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaMudah" data-format="u"><u>U</u></button>
+                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaMudah" data-format="i"><i>I</i></button>
+                                    <div class="color-picker-wrapper"><input type="color" class="toolbar-color" data-format-target="quranMaknaMudah" data-format="color"></div>
+                                </div>
+                                <textarea id="quranMaknaMudah" class="form-control" rows="4" placeholder="Masukkan terjemahan/maksud ayat yang mudah difahami secara keseluruhan..." required></textarea>
                             </div>
+
                             <div class="form-group">
-                                <label for="kuizJenis">Format Soalan</label>
-                                <select id="kuizJenis" class="form-control" required>
-                                    <option value="pilihan">Aneka Pilihan (4 Pilihan)</option>
-                                    <option value="betul_salah">Betul / Salah</option>
-                                    <option value="isi_kosong">Isi Tempat Kosong</option>
-                                    <option value="padanan">Padanan Pasangan</option>
-                                </select>
+                                <label for="quranMaknaLiteral" style="color: #0369a1;">2. Makna Secara Literal / Harfiah (Bahasa Melayu)</label>
+                                <div class="text-toolbar">
+                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaLiteral" data-format="b">B</button>
+                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaLiteral" data-format="u"><u>U</u></button>
+                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaLiteral" data-format="i"><i>I</i></button>
+                                    <div class="color-picker-wrapper"><input type="color" class="toolbar-color" data-format-target="quranMaknaLiteral" data-format="color"></div>
+                                </div>
+                                <textarea id="quranMaknaLiteral" class="form-control" rows="4" placeholder="Masukkan makna perkataan demi perkataan atau terjemahan literal..." required></textarea>
                             </div>
-                        </div>
-
-                        <div id="dynamicQuizBuilderBox" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 16px;"></div>
-
-                        <div class="form-group">
-                            <label for="kuizPenerangan">Penerangan / Nota Jawapan (Pilihan)</label>
-                            <textarea id="kuizPenerangan" class="form-control" rows="2" placeholder="Penerangan ini akan dipaparkan kepada pelajar selepas mereka menjawab soalan..."></textarea>
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="btnBatalKuiz">Batal</button>
-                            <button type="submit" class="btn btn-success">Simpan Soalan Kuiz</button>
+                            <button type="button" class="btn btn-secondary" id="btnBatalQuran">Batal</button>
+                            <button type="submit" class="btn btn-success">Simpan Ayat Al-Quran</button>
                         </div>
                     </form>
                 </div>
@@ -331,7 +319,7 @@
                 <div style="margin-top: 32px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
                     <button class="btn btn-primary" id="btnTabJadualIstilah" style="flex: 1;">Paparkan Jadual Istilah</button>
                     <button class="btn btn-secondary" id="btnTabJadualAyat" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Ayat</button>
-                    <button class="btn btn-secondary" id="btnTabJadualKuiz" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Kuiz</button>
+                    <button class="btn btn-secondary" id="btnTabJadualQuran" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">Paparkan Jadual Al-Quran</button>
                 </div>
 
                 <!-- Pembungkus Jadual Istilah -->
@@ -375,23 +363,22 @@
                     </div>
                 </div>
 
-                <!-- Pembungkus Jadual Kuiz -->
-                <div id="jadualKuizWrapper" style="display: none;">
+                <!-- Pembungkus Jadual Al-Quran -->
+                <div id="jadualQuranWrapper" style="display: none;">
                     <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
-                        <h3 style="color: var(--primary-color); margin: 0;">Jadual Koleksi Kuiz</h3>
-                        <input type="text" id="adminSearchKuizInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari soalan, jenis, kategori...">
+                        <h3 style="color: var(--primary-color); margin: 0;">Jadual Hafalan Al-Quran</h3>
+                        <input type="text" id="adminSearchQuranInput" class="form-control" style="max-width: 350px;" placeholder="🔍 Cari surah, ayat, makna mudah/literal...">
                     </div>
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
-                                    <th style="width: 45%;">Soalan</th>
-                                    <th style="width: 15%;">Format</th>
-                                    <th style="width: 15%;">Kategori</th>
-                                    <th style="width: 25%;">Tindakan</th>
+                                    <th style="width: 35%; text-align: right;">Ayat Al-Quran (AR)</th>
+                                    <th style="width: 45%;">Makna Mudah & Literal (MS)</th>
+                                    <th style="width: 20%;">Tindakan</th>
                                 </tr>
                             </thead>
-                            <tbody id="adminTableKuizBody"></tbody>
+                            <tbody id="adminTableQuranBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -449,6 +436,6 @@
     </div>
 </div>
 
-<script src="script.js?v=20261018-audit"></script>
+<script src="script.js?v=20261025-surah"></script>
 </body>
 </html>
