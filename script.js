@@ -81,7 +81,7 @@ function sanitizeEditorHtml(html) {
 // ============================================================================
 let dataIstilah = [];
 let dataAyat = [];
-let dataKuiz = [];
+let dataQuran = [];
 let currentSearch = "";
 let selectedSearchItem = null;
 let selectedAyatItem = null;
@@ -92,14 +92,6 @@ let hafalanDeck = [];
 let hafalanIndex = 0;
 let hafalanFlipped = false;
 let hafalanMasteredIds = new Set();
-
-// State: Latihan Kuiz Awam
-let activeQuizList = [];
-let currentQuizIdx = 0;
-let currentQuizScore = 0;
-let quizAnswered = false;
-let selectedPadananKiri = null;
-let matchedPadananCount = 0;
 
 // DOM Elements: Navigasi & Carian
 const navButtons = document.querySelectorAll(".nav-btn");
@@ -117,6 +109,8 @@ const resultsAyatList = document.getElementById("resultsAyatList");
 const hafalanSumber = document.getElementById("hafalanSumber");
 const hafalanKategori = document.getElementById("hafalanKategori");
 const hafalanKategoriGroup = document.getElementById("hafalanKategoriGroup");
+const hafalanSurah = document.getElementById("hafalanSurah");
+const hafalanSurahGroup = document.getElementById("hafalanSurahGroup");
 const hafalanArahAyat = document.getElementById("hafalanArahAyat");
 const hafalanArahGroup = document.getElementById("hafalanArahGroup");
 const btnRawakHafalan = document.getElementById("btnRawakHafalan");
@@ -125,12 +119,6 @@ const hafalanCounterText = document.getElementById("hafalanCounterText");
 const hafalanMasteredCount = document.getElementById("hafalanMasteredCount");
 const hafalanProgressFill = document.getElementById("hafalanProgressFill");
 const flashcardArea = document.getElementById("flashcardArea");
-
-// DOM Elements: Kuiz Awam
-const filterKategoriKuizAwam = document.getElementById("filterKategoriKuizAwam");
-const filterJenisKuizAwam = document.getElementById("filterJenisKuizAwam");
-const btnMulaKuizAwam = document.getElementById("btnMulaKuizAwam");
-const publicQuizContainer = document.getElementById("publicQuizContainer");
 
 // DOM Elements: Admin Auth & Dashboard
 const adminAuthBox = document.getElementById("adminAuthBox");
@@ -172,22 +160,23 @@ const ayatArEditor = document.getElementById("ayatArEditor");
 const terjemahanMsEditor = document.getElementById("terjemahanMsEditor");
 const inputKataKunciAyat = document.getElementById("kataKunciAyat");
 
-// DOM Elements: Admin Kuiz
-const formKuizSection = document.getElementById("formKuizSection");
-const kuizForm = document.getElementById("kuizForm");
-const btnBukaBorangKuiz = document.getElementById("btnBukaBorangKuiz");
-const btnBatalKuiz = document.getElementById("btnBatalKuiz");
-const formKuizTitle = document.getElementById("formKuizTitle");
-const kuizIdInput = document.getElementById("kuizId");
-const kuizTajukInput = document.getElementById("kuizTajuk");
-const kuizKategoriInput = document.getElementById("kuizKategori");
-const kuizJenisInput = document.getElementById("kuizJenis");
-const kuizPeneranganInput = document.getElementById("kuizPenerangan");
-const dynamicQuizBuilderBox = document.getElementById("dynamicQuizBuilderBox");
-const btnTabJadualKuiz = document.getElementById("btnTabJadualKuiz");
-const jadualKuizWrapper = document.getElementById("jadualKuizWrapper");
-const adminSearchKuizInput = document.getElementById("adminSearchKuizInput");
-const adminTableKuizBody = document.getElementById("adminTableKuizBody");
+// DOM Elements: Admin Pengurusan Al-Quran
+const formQuranSection = document.getElementById("formQuranSection");
+const quranForm = document.getElementById("quranForm");
+const btnBukaBorangQuran = document.getElementById("btnBukaBorangQuran");
+const btnBatalQuran = document.getElementById("btnBatalQuran");
+const formQuranTitle = document.getElementById("formQuranTitle");
+const inputQuranId = document.getElementById("quranId");
+const inputQuranNoSurah = document.getElementById("quranNoSurah"); 
+const inputQuranSurah = document.getElementById("quranSurah");
+const inputQuranNoAyat = document.getElementById("quranNoAyat");   
+const inputQuranAyatAr = document.getElementById("quranAyatAr");
+const inputQuranMaknaMudah = document.getElementById("quranMaknaMudah");
+const inputQuranMaknaLiteral = document.getElementById("quranMaknaLiteral");
+const btnTabJadualQuran = document.getElementById("btnTabJadualQuran");
+const jadualQuranWrapper = document.getElementById("jadualQuranWrapper");
+const adminSearchQuranInput = document.getElementById("adminSearchQuranInput");
+const adminTableQuranBody = document.getElementById("adminTableQuranBody");
 
 // ============================================================================
 // LOGIK NAVIGASI
@@ -209,11 +198,9 @@ navButtons.forEach(button => {
         if (targetSection === "sectionAdmin") {
             closeForm();
             closeFormAyat();
-            closeFormKuiz();
+            closeFormQuran();
         } else if (targetSection === "sectionHafalan") {
             initHafalanDeck();
-        } else if (targetSection === "sectionKuiz") {
-            if (activeQuizList.length === 0) initPublicQuiz();
         }
     });
 });
@@ -233,8 +220,87 @@ if (btnFloatingSearch) {
 }
 
 // ============================================================================
-// MUAT DATA & DATALIST
+// MUAT DATA, DATALIST & PENYUSUNAN BERNOMBOR SURAH / AYAT
 // ============================================================================
+function parseSurahAyat(rawStr) {
+    const teks = (rawStr || "").trim();
+    // Format standard: "[002] Surah Al-Baqarah : Ayat 255" atau "2. Surah Al-Baqarah: 255"
+    const match = teks.match(/^(?:\[?(\d+)\]?[\.\-\s]*)?([^:]+?)(?:\s*:\s*(?:Ayat\s*)?(.+))?$/i);
+    if (!match) {
+        return {
+            noSurah: 999,
+            namaSurah: teks || "Tiada Nama Surah",
+            noAyatStr: "",
+            noAyatInt: 9999,
+            labelSurahDropdown: teks || "Tiada Nama Surah",
+            labelPenuhBadge: teks || "Ayat Al-Quran"
+        };
+    }
+
+    const noSurah = match[1] ? parseInt(match[1], 10) : 999;
+    let namaSurah = (match[2] || "").trim().replace(/^surah\s+/i, "");
+    const noAyatStr = (match[3] || "").trim();
+    const noAyatInt = noAyatStr ? (parseInt(noAyatStr, 10) || 9999) : 9999;
+
+    const prefixNo = noSurah < 999 ? `${noSurah}. ` : "";
+    const labelSurahDropdown = `${prefixNo}Surah ${namaSurah}`;
+    const labelPenuhBadge = noAyatStr
+        ? `${prefixNo}Surah ${namaSurah} : Ayat ${noAyatStr}`
+        : labelSurahDropdown;
+
+    return { noSurah, namaSurah, noAyatStr, noAyatInt, labelSurahDropdown, labelPenuhBadge };
+}
+
+function ekstrakNamaSurah(surahAyatRaw) {
+    return parseSurahAyat(surahAyatRaw).labelSurahDropdown;
+}
+
+function susunIkutSurahDanAyat(list) {
+    return [...list].sort((a, b) => {
+        const pA = parseSurahAyat(a.surah_ayat);
+        const pB = parseSurahAyat(b.surah_ayat);
+        if (pA.noSurah !== pB.noSurah) return pA.noSurah - pB.noSurah;
+        const cmpNama = pA.namaSurah.localeCompare(pB.namaSurah, "ms", { numeric: true });
+        if (cmpNama !== 0) return cmpNama;
+        if (pA.noAyatInt !== pB.noAyatInt) return pA.noAyatInt - pB.noAyatInt;
+        return pA.noAyatStr.localeCompare(b.noAyatStr || "", "ms", { numeric: true });
+    });
+}
+
+function kemaskiniSenaraiSurahDropdown() {
+    if (!hafalanSurah) return;
+    const pilihanSemasa = hafalanSurah.value;
+
+    const surahMap = new Map();
+    dataQuran.forEach(item => {
+        const info = parseSurahAyat(item.surah_ayat);
+        const kunci = info.labelSurahDropdown.toLowerCase();
+        if (!surahMap.has(kunci)) {
+            surahMap.set(kunci, info);
+        }
+    });
+
+    // Susun dropdown mengikut No. Surah (1 -> 114)
+    const senaraiSurah = Array.from(surahMap.values())
+        .sort((a, b) => a.noSurah !== b.noSurah ? a.noSurah - b.noSurah : a.namaSurah.localeCompare(b.namaSurah, "ms"))
+        .map(info => info.labelSurahDropdown);
+
+    hafalanSurah.innerHTML = `<option value="semua">Semua Surah</option>` +
+        senaraiSurah.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join("");
+
+    if (pilihanSemasa && (pilihanSemasa === "semua" || senaraiSurah.includes(pilihanSemasa))) {
+        hafalanSurah.value = pilihanSemasa;
+    } else {
+        hafalanSurah.value = "semua";
+    }
+
+    const datalistAdmin = document.getElementById("senaraiSurahAdmin");
+    if (datalistAdmin) {
+        const unikNama = Array.from(new Set(Array.from(surahMap.values()).map(i => i.namaSurah)));
+        datalistAdmin.innerHTML = unikNama.map(n => `<option value="${escapeAttr(n)}"></option>`).join("");
+    }
+}
+
 async function loadDataFromSupabase() {
     const resIstilah = await supabaseClient
         .from("istilah_arab")
@@ -247,20 +313,19 @@ async function loadDataFromSupabase() {
     if (resAyat.error) console.error("Ralat ayat:", resAyat.error.message);
     else dataAyat = resAyat.data || [];
 
-    const resKuiz = await supabaseClient
-        .from("koleksi_kuiz")
-        .select("*")
-        .order("created_at", { ascending: false });
-    if (resKuiz.error) console.error("Ralat kuiz:", resKuiz.error.message);
-    else dataKuiz = resKuiz.data || [];
+    const resQuran = await supabaseClient
+        .from("koleksi_quran")
+        .select("*");
+    if (resQuran.error) console.error("Ralat quran:", resQuran.error.message);
+    else dataQuran = susunIkutSurahDanAyat(resQuran.data || []);
 
     renderAdminList();
     renderAdminAyatList();
-    renderAdminKuizList();
+    renderAdminQuranList();
     renderAlphabeticalDirectory();
     kemaskiniSenaraiDatalist();
+    kemaskiniSenaraiSurahDropdown();
     initHafalanDeck();
-    initPublicQuiz();
 }
 
 function kemaskiniSenaraiDatalist() {
@@ -308,20 +373,27 @@ function shuffleArray(arr) {
 }
 
 // ============================================================================
-// MODUL 1: MOD HAFALAN (FLASHCARDS)
+// MODUL 1: MOD HAFALAN (FLASHCARDS) - ISTILAH, AYAT & AL-QURAN
 // ============================================================================
 function initHafalanDeck(shouldShuffle = false) {
     if (!hafalanSumber || !flashcardArea) return;
     const sumber = hafalanSumber.value;
     const kategori = hafalanKategori ? hafalanKategori.value : "semua";
+    const surahPilihan = hafalanSurah ? hafalanSurah.value : "semua";
     const arahAyat = hafalanArahAyat ? hafalanArahAyat.value : "ar_ke_ms";
 
-    // Kawal paparan dropdown mengikut Sumber Hafalan
+    // Kawal paparan dropdown mengikut Sumber Hafalan:
+    // - Istilah: Sumber | Pilihan Hafalan (Kategori)
+    // - Ayat: Sumber | Pilihan Hafalan (Arah)
+    // - Quran: Sumber | Pilihan Surah (Tengah) | Pilihan Hafalan (Arah)
     if (hafalanKategoriGroup) {
         hafalanKategoriGroup.style.display = sumber === "istilah" ? "block" : "none";
     }
+    if (hafalanSurahGroup) {
+        hafalanSurahGroup.style.display = sumber === "quran" ? "block" : "none";
+    }
     if (hafalanArahGroup) {
-        hafalanArahGroup.style.display = sumber === "ayat" ? "block" : "none";
+        hafalanArahGroup.style.display = (sumber === "ayat" || sumber === "quran") ? "block" : "none";
     }
 
     let rawList = [];
@@ -333,12 +405,13 @@ function initHafalanDeck(shouldShuffle = false) {
                 frontSub: item.disiplin_ilmu ? item.disiplin_ilmu.toUpperCase() : "ISTILAH",
                 frontMainAr: item.title_ar || "",
                 frontMainMs: item.title_ms || "",
+                frontCustomHtml: "",
                 backTitle: "Definisi & Penerangan",
                 backContentHtml: item.definition
                     ? sanitizeHtml(item.definition).replace(/\n/g, "<br>")
                     : "<i>Tiada definisi.</i>"
             }));
-    } else {
+    } else if (sumber === "ayat") {
         rawList = dataAyat.map(item => {
             const notaKataKunci = item.kata_kunci
                 ? `<div style="margin-top: 12px; font-size: 0.8rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
@@ -351,6 +424,7 @@ function initHafalanDeck(shouldShuffle = false) {
                     frontSub: "Bahasa Melayu",
                     frontMainAr: "",
                     frontMainMs: stripHtml(item.terjemahan_ms),
+                    frontCustomHtml: "",
                     backTitle: "Bahasa Arab",
                     backContentHtml:
                         `<div style="font-family: var(--font-arabic); font-size: 2.1rem; color: var(--accent-color); direction: rtl; line-height: 1.8;">${sanitizeHtml(item.ayat_ar)}</div>` +
@@ -361,13 +435,61 @@ function initHafalanDeck(shouldShuffle = false) {
             // Pilihan 2 (Default): Teka daripada Bahasa Arab -> Bahasa Melayu
             return {
                 id: "ayat-" + item.id,
-                frontSub: "Bahsa Arab",
+                frontSub: "Bahasa Arab",
                 frontMainAr: stripHtml(item.ayat_ar),
                 frontMainMs: "",
+                frontCustomHtml: "",
                 backTitle: "Bahasa Melayu",
                 backContentHtml:
                     `<div style="font-size: 1.15rem; font-weight: 600; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
                     notaKataKunci
+            };
+        });
+    } else if (sumber === "quran") {
+        const filteredQuran = dataQuran.filter(item => {
+            if (surahPilihan === "semua") return true;
+            return ekstrakNamaSurah(item.surah_ayat).toLowerCase() === surahPilihan.toLowerCase();
+        });
+
+        rawList = filteredQuran.map((item, idx) => {
+            const info = parseSurahAyat(item.surah_ayat);
+            const labelSurah = ` • ${info.labelPenuhBadge}`;
+
+            const htmlDuaMaknaMelayu = `
+                <div class="quran-makna-wrapper">
+                    <div class="quran-makna-box quran-makna-mudah">
+                        <div class="quran-makna-label">📖 Makna Mudah Difahami</div>
+                        <div class="quran-makna-text">${sanitizeHtml(item.makna_mudah || "").replace(/\n/g, "<br>")}</div>
+                    </div>
+                    <div class="quran-makna-box quran-makna-literal">
+                        <div class="quran-makna-label">🔍 Makna Secara Literal</div>
+                        <div class="quran-makna-text">${sanitizeHtml(item.makna_literal || "").replace(/\n/g, "<br>")}</div>
+                    </div>
+                </div>
+            `;
+
+            // Pilihan 1: Melayu (Makna Mudah & Literal) -> Arab (Ayat Al-Quran)
+            if (arahAyat === "ms_ke_ar") {
+                return {
+                    id: "quran-" + item.id,
+                    frontSub: "Bahasa Melayu" + labelSurah,
+                    frontMainAr: "",
+                    frontMainMs: "",
+                    frontCustomHtml: htmlDuaMaknaMelayu,
+                    backTitle: "Ayat Al-Quran" + labelSurah,
+                    backContentHtml: `<div style="font-family: var(--font-arabic); font-size: 2.2rem; color: var(--accent-color); direction: rtl; line-height: 1.85;">${escapeHtml(item.ayat_ar)}</div>`
+                };
+            }
+
+            // Pilihan 2 (Default): Arab (Ayat Al-Quran) -> Melayu (Makna Mudah & Literal)
+            return {
+                id: "quran-" + item.id,
+                frontSub: "Ayat Al-Quran" + labelSurah,
+                frontMainAr: item.ayat_ar || "",
+                frontMainMs: "",
+                frontCustomHtml: "",
+                backTitle: "Bahasa Melayu" + labelSurah,
+                backContentHtml: htmlDuaMaknaMelayu
             };
         });
     }
@@ -415,6 +537,7 @@ function renderFlashcard() {
                     <div class="flashcard-center-content">
                         ${currentCard.frontMainAr ? `<div class="flashcard-arabic">${escapeHtml(currentCard.frontMainAr)}</div>` : ""}
                         ${currentCard.frontMainMs ? `<div class="flashcard-ms">${escapeHtml(currentCard.frontMainMs)}</div>` : ""}
+                        ${currentCard.frontCustomHtml ? `<div class="flashcard-back-text">${currentCard.frontCustomHtml}</div>` : ""}
                     </div>
                     <div class="flashcard-hint">👆 Klik kad untuk lihat jawapan / maksud</div>
                 </div>
@@ -491,6 +614,7 @@ function renderFlashcard() {
 
 if (hafalanSumber) hafalanSumber.addEventListener("change", () => initHafalanDeck(false));
 if (hafalanKategori) hafalanKategori.addEventListener("change", () => initHafalanDeck(false));
+if (hafalanSurah) hafalanSurah.addEventListener("change", () => initHafalanDeck(false));
 if (hafalanArahAyat) hafalanArahAyat.addEventListener("change", () => initHafalanDeck(false));
 if (btnRawakHafalan) btnRawakHafalan.addEventListener("click", () => initHafalanDeck(true));
 if (btnResetHafalan) {
@@ -501,285 +625,13 @@ if (btnResetHafalan) {
 }
 
 // ============================================================================
-// MODUL 2: LATIHAN KUIZ AWAM (PELAJAR)
-// ============================================================================
-function initPublicQuiz() {
-    if (!publicQuizContainer) return;
-    const kat = filterKategoriKuizAwam ? filterKategoriKuizAwam.value : "semua";
-    const jenis = filterJenisKuizAwam ? filterJenisKuizAwam.value : "semua";
-
-    const filtered = dataKuiz.filter(q => {
-        const matchKat = (kat === "semua") || (q.kategori === kat);
-        const matchJenis = (jenis === "semua") || (q.jenis_soalan === jenis);
-        return matchKat && matchJenis;
-    });
-
-    activeQuizList = shuffleArray(filtered);
-    currentQuizIdx = 0;
-    currentQuizScore = 0;
-    quizAnswered = false;
-    renderCurrentPublicQuestion();
-}
-
-function renderCurrentPublicQuestion() {
-    if (!publicQuizContainer) return;
-
-    if (activeQuizList.length === 0) {
-        publicQuizContainer.innerHTML = `<div class="welcome-message">Tiada soalan kuiz bagi kategori/format ini buat masa sekarang.</div>`;
-        return;
-    }
-
-    if (currentQuizIdx >= activeQuizList.length) {
-        const total = activeQuizList.length;
-        const peratus = Math.round((currentQuizScore / total) * 100);
-        publicQuizContainer.innerHTML = `
-            <div class="card" style="text-align: center; padding: 32px 20px;">
-                <h2 style="color: var(--primary-color); margin-bottom: 8px;">🎉 Tamat Latihan Kuiz!</h2>
-                <p style="color: var(--text-muted); margin-bottom: 20px;">Berikut adalah keputusan pencapaian anda:</p>
-                <div style="font-size: 3rem; font-weight: 800; color: #8b5cf6; margin-bottom: 12px;">
-                    ${currentQuizScore} / ${total} <span style="font-size: 1.5rem;">(${peratus}%)</span>
-                </div>
-                <button type="button" class="btn btn-primary" id="btnCubaLagiKuiz" style="margin-top: 16px;">🔄 Cuba Sekali Lagi</button>
-            </div>
-        `;
-        const btnRetry = document.getElementById("btnCubaLagiKuiz");
-        if (btnRetry) btnRetry.addEventListener("click", initPublicQuiz);
-        return;
-    }
-
-    const q = activeQuizList[currentQuizIdx];
-    quizAnswered = false;
-    selectedPadananKiri = null;
-    matchedPadananCount = 0;
-
-    let katLabel = "Sorof";
-    if (q.kategori === "nahu") katLabel = "Nahu";
-    else if (q.kategori === "nombor") katLabel = "Penomboran ('Adad)";
-
-    let bodyHtml = "";
-    const d = q.data_soalan || {};
-
-    if (q.jenis_soalan === "pilihan") {
-        const opts = Array.isArray(d.options) ? d.options : [];
-        bodyHtml = `<div class="quiz-options-grid">` +
-            opts.map((opt, idx) => `<button type="button" class="quiz-opt-btn" data-idx="${idx}">${escapeHtml(opt)}</button>`).join("") +
-            `</div>`;
-    } else if (q.jenis_soalan === "betul_salah") {
-        bodyHtml = `
-            <div class="quiz-options-grid">
-                <button type="button" class="quiz-opt-btn" data-bool="true">✅ Betul / Benar</button>
-                <button type="button" class="quiz-opt-btn" data-bool="false">❌ Salah / Palsu</button>
-            </div>
-        `;
-    } else if (q.jenis_soalan === "isi_kosong") {
-        const hintHtml = d.petunjuk
-            ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px;">💡 <strong>Petunjuk:</strong> ${escapeHtml(d.petunjuk)}</div>`
-            : "";
-        bodyHtml = `
-            ${hintHtml}
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <input type="text" id="inputJawapanPelajar" class="form-control" placeholder="Taip jawapan anda di sini..." autocomplete="off" style="flex: 1;">
-                <button type="button" class="btn btn-primary" id="btnSemakIsiKosong">Semak Jawapan</button>
-            </div>
-        `;
-    } else if (q.jenis_soalan === "padanan") {
-        const pasangan = Array.isArray(d.pasangan) ? d.pasangan : [];
-        const kiriList = shuffleArray(pasangan.map((p, i) => ({ text: p.kiri, pairId: i })));
-        const kananList = shuffleArray(pasangan.map((p, i) => ({ text: p.kanan, pairId: i })));
-
-        bodyHtml = `
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Sila klik item di sebelah kiri, kemudian klik pasangannya yang betul di sebelah kanan:</div>
-            <div class="padanan-interactive-grid">
-                <div class="padanan-col" id="colPadananKiri">
-                    ${kiriList.map(k => `<button type="button" class="padanan-item-btn" data-side="kiri" data-pair="${k.pairId}">${escapeHtml(k.text)}</button>`).join("")}
-                </div>
-                <div class="padanan-col" id="colPadananKanan">
-                    ${kananList.map(k => `<button type="button" class="padanan-item-btn" data-side="kanan" data-pair="${k.pairId}">${escapeHtml(k.text)}</button>`).join("")}
-                </div>
-            </div>
-        `;
-    }
-
-    publicQuizContainer.innerHTML = `
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-                <span style="font-weight: 700; color: var(--text-muted); font-size: 0.9rem;">Soalan ${currentQuizIdx + 1} / ${activeQuizList.length}</span>
-                <div style="display: flex; gap: 6px;">
-                    <span class="badge">${escapeHtml(katLabel)}</span>
-                    <span class="badge" style="background: #ede9fe; color: #6d28d9;">Skor Semasa: ${currentQuizScore}</span>
-                </div>
-            </div>
-
-            <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color); margin-bottom: 20px; line-height: 1.6;">
-                ${escapeHtml(q.tajuk_soalan)}
-            </div>
-
-            ${bodyHtml}
-
-            <div id="quizFeedbackBox" style="display: none; margin-top: 20px; padding: 16px; border-radius: 8px;"></div>
-
-            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                <button type="button" class="btn btn-primary" id="btnSoalanSeterusnya" style="display: none;">
-                    ${currentQuizIdx + 1 < activeQuizList.length ? "Soalan Seterusnya ➡" : "Lihat Keputusan 🏁"}
-                </button>
-            </div>
-        </div>
-    `;
-
-    bindQuizQuestionEvents(q);
-}
-
-function showQuizFeedback(isCorrect, q, extraMsg = "") {
-    quizAnswered = true;
-    if (isCorrect) currentQuizScore++;
-
-    const fb = document.getElementById("quizFeedbackBox");
-    const btnNext = document.getElementById("btnSoalanSeterusnya");
-    if (fb) {
-        fb.style.display = "block";
-        fb.style.backgroundColor = isCorrect ? "#d1fae5" : "#fee2e2";
-        fb.style.border = isCorrect ? "1px solid #6ee7b7" : "1px solid #fca5a5";
-        fb.style.color = isCorrect ? "#065f46" : "#991b1b";
-
-        const notaHtml = q.penerangan
-            ? `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(0,0,0,0.15); font-size: 0.9rem;">📌 <strong>Nota Penerangan:</strong><br>${escapeHtml(q.penerangan)}</div>`
-            : "";
-        fb.innerHTML = `<strong>${isCorrect ? "✔ Tahniah! Jawapan anda tepat." : "❌ Kurang tepat."}</strong> ${extraMsg} ${notaHtml}`;
-    }
-    if (btnNext) {
-        btnNext.style.display = "inline-flex";
-        btnNext.addEventListener("click", () => {
-            currentQuizIdx++;
-            renderCurrentPublicQuestion();
-        });
-    }
-}
-
-function bindQuizQuestionEvents(q) {
-    const d = q.data_soalan || {};
-
-    if (q.jenis_soalan === "pilihan") {
-        const btns = publicQuizContainer.querySelectorAll(".quiz-opt-btn");
-        btns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                if (quizAnswered) return;
-                const chosen = parseInt(btn.getAttribute("data-idx"), 10);
-                const correctIdx = parseInt(d.jawapan_betul ?? 0, 10);
-                const isCorrect = (chosen === correctIdx);
-
-                btns.forEach((b, i) => {
-                    b.disabled = true;
-                    if (i === correctIdx) b.classList.add("opt-correct");
-                    else if (i === chosen && !isCorrect) b.classList.add("opt-wrong");
-                });
-                showQuizFeedback(isCorrect, q);
-            });
-        });
-    } else if (q.jenis_soalan === "betul_salah") {
-        const btns = publicQuizContainer.querySelectorAll(".quiz-opt-btn");
-        btns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                if (quizAnswered) return;
-                const chosen = btn.getAttribute("data-bool") === "true";
-                const correctBool = Boolean(d.jawapan_betul);
-                const isCorrect = (chosen === correctBool);
-
-                btns.forEach(b => {
-                    b.disabled = true;
-                    const bVal = b.getAttribute("data-bool") === "true";
-                    if (bVal === correctBool) b.classList.add("opt-correct");
-                    else if (bVal === chosen && !isCorrect) b.classList.add("opt-wrong");
-                });
-                showQuizFeedback(isCorrect, q);
-            });
-        });
-    } else if (q.jenis_soalan === "isi_kosong") {
-        const inp = document.getElementById("inputJawapanPelajar");
-        const btnSemak = document.getElementById("btnSemakIsiKosong");
-
-        const semakFn = () => {
-            if (quizAnswered || !inp) return;
-            const userVal = inp.value.trim().toLowerCase();
-            if (!userVal) return;
-
-            const accepted = Array.isArray(d.jawapan_betul)
-                ? d.jawapan_betul.map(a => String(a).trim().toLowerCase())
-                : [String(d.jawapan_betul || "").trim().toLowerCase()];
-
-            const isCorrect = accepted.includes(userVal);
-            inp.disabled = true;
-            if (btnSemak) btnSemak.disabled = true;
-
-            const skemaText = Array.isArray(d.jawapan_betul) ? d.jawapan_betul.join(" / ") : d.jawapan_betul;
-            const extra = !isCorrect ? `<br>Jawapan sebenar: <strong>${escapeHtml(skemaText)}</strong>` : "";
-            showQuizFeedback(isCorrect, q, extra);
-        };
-
-        if (btnSemak) btnSemak.addEventListener("click", semakFn);
-        if (inp) {
-            inp.addEventListener("keydown", (e) => {
-                if (e.key === "Enter") {
-                    e.preventDefault();
-                    semakFn();
-                }
-            });
-        }
-    } else if (q.jenis_soalan === "padanan") {
-        const totalPairs = Array.isArray(d.pasangan) ? d.pasangan.length : 0;
-        let hadMistake = false;
-
-        const leftBtns = publicQuizContainer.querySelectorAll("#colPadananKiri .padanan-item-btn");
-        const rightBtns = publicQuizContainer.querySelectorAll("#colPadananKanan .padanan-item-btn");
-
-        leftBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                if (quizAnswered || btn.classList.contains("matched")) return;
-                leftBtns.forEach(b => b.classList.remove("selected"));
-                btn.classList.add("selected");
-                selectedPadananKiri = btn;
-            });
-        });
-
-        rightBtns.forEach(btn => {
-            btn.addEventListener("click", () => {
-                if (quizAnswered || btn.classList.contains("matched") || !selectedPadananKiri) return;
-                const leftPair = selectedPadananKiri.getAttribute("data-pair");
-                const rightPair = btn.getAttribute("data-pair");
-
-                if (leftPair === rightPair) {
-                    selectedPadananKiri.classList.remove("selected");
-                    selectedPadananKiri.classList.add("matched");
-                    btn.classList.add("matched");
-                    selectedPadananKiri.disabled = true;
-                    btn.disabled = true;
-                    selectedPadananKiri = null;
-                    matchedPadananCount++;
-
-                    if (matchedPadananCount === totalPairs) {
-                        showQuizFeedback(!hadMistake, q, hadMistake ? "(Terdapat cubaan padanan yang salah sebentar tadi)" : "");
-                    }
-                } else {
-                    hadMistake = true;
-                    btn.classList.add("wrong-shake");
-                    setTimeout(() => btn.classList.remove("wrong-shake"), 500);
-                }
-            });
-        });
-    }
-}
-
-if (btnMulaKuizAwam) btnMulaKuizAwam.addEventListener("click", initPublicQuiz);
-if (filterKategoriKuizAwam) filterKategoriKuizAwam.addEventListener("change", initPublicQuiz);
-if (filterJenisKuizAwam) filterJenisKuizAwam.addEventListener("change", initPublicQuiz);
-
-// ============================================================================
 // PANEL ADMIN: KAWALAN PAPARAN JADUAL
 // ============================================================================
 function resetTabJadual() {
-    [jadualIstilahWrapper, jadualAyatWrapper, jadualKuizWrapper].forEach(w => {
+    [jadualIstilahWrapper, jadualAyatWrapper, jadualQuranWrapper].forEach(w => {
         if (w) w.style.display = "none";
     });
-    [btnTabJadualIstilah, btnTabJadualAyat, btnTabJadualKuiz].forEach(b => {
+    [btnTabJadualIstilah, btnTabJadualAyat, btnTabJadualQuran].forEach(b => {
         if (b) {
             b.classList.replace("btn-primary", "btn-secondary");
             b.style.backgroundColor = "var(--border-color)";
@@ -808,283 +660,152 @@ if (btnTabJadualAyat) {
     });
 }
 
-if (btnTabJadualKuiz) {
-    btnTabJadualKuiz.addEventListener("click", () => {
+if (btnTabJadualQuran) {
+    btnTabJadualQuran.addEventListener("click", () => {
         resetTabJadual();
-        jadualKuizWrapper.style.display = "block";
-        btnTabJadualKuiz.classList.replace("btn-secondary", "btn-primary");
-        btnTabJadualKuiz.style.backgroundColor = "#8b5cf6";
-        btnTabJadualKuiz.style.color = "#ffffff";
+        jadualQuranWrapper.style.display = "block";
+        btnTabJadualQuran.classList.replace("btn-secondary", "btn-primary");
+        btnTabJadualQuran.style.backgroundColor = "#0d9488";
+        btnTabJadualQuran.style.color = "#ffffff";
     });
 }
 
 // ============================================================================
-// PANEL ADMIN: PENGURUSAN KUIZ
+// PANEL ADMIN: PENGURUSAN HAFALAN AL-QURAN
 // ============================================================================
-function renderQuizInputFields(jenis, dataLama = null) {
-    if (!dynamicQuizBuilderBox) return;
-    dynamicQuizBuilderBox.innerHTML = "";
-
-    if (jenis === "pilihan") {
-        const opts = dataLama?.options || ["", "", "", ""];
-        const correctIdx = dataLama?.jawapan_betul ?? 0;
-
-        let html = `
-            <div style="font-weight: 600; margin-bottom: 10px; color: var(--primary-color);">Pilihan Jawapan (Tanda pada radio jawapan yang betul):</div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-        `;
-        opts.forEach((opt, idx) => {
-            html += `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="radio" name="pilihanJawapanBetul" value="${idx}" ${idx === correctIdx ? "checked" : ""} style="width: 20px; height: 20px;">
-                    <input type="text" class="form-control opt-input" placeholder="Pilihan ${idx + 1}" value="${escapeAttr(opt)}" required>
-                </div>
-            `;
-        });
-        html += `</div>`;
-        dynamicQuizBuilderBox.innerHTML = html;
-    } else if (jenis === "betul_salah") {
-        const isTrue = dataLama?.jawapan_betul !== false;
-        dynamicQuizBuilderBox.innerHTML = `
-            <div style="font-weight: 600; margin-bottom: 10px; color: var(--primary-color);">Tentukan Penyataan Ini:</div>
-            <div style="display: flex; gap: 24px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="radio" name="jawapanBetulSalah" value="true" ${isTrue ? "checked" : ""}> Betul / Benar
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="radio" name="jawapanBetulSalah" value="false" ${!isTrue ? "checked" : ""}> Salah / Palsu
-                </label>
-            </div>
-        `;
-    } else if (jenis === "isi_kosong") {
-        const jawapanStr = Array.isArray(dataLama?.jawapan_betul)
-            ? dataLama.jawapan_betul.join(", ")
-            : (dataLama?.jawapan_betul || "");
-        const petunjuk = dataLama?.petunjuk || "";
-
-        dynamicQuizBuilderBox.innerHTML = `
-            <div class="form-group" style="margin-bottom: 12px;">
-                <label style="font-weight: 600;">Jawapan Tepat yang Diterima (Gunakan koma jika ada variasi ejaan)</label>
-                <input type="text" id="jawapanIsiKosong" class="form-control" placeholder="cth: كَتَبَ, kataba" value="${escapeAttr(jawapanStr)}" required>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Petunjuk / Hint (Pilihan)</label>
-                <input type="text" id="petunjukIsiKosong" class="form-control" placeholder="cth: Kata kerja madhi 3 huruf" value="${escapeAttr(petunjuk)}">
-            </div>
-        `;
-    } else if (jenis === "padanan") {
-        const pasangan = dataLama?.pasangan || [
-            { kiri: "", kanan: "" },
-            { kiri: "", kanan: "" }
-        ];
-
-        let html = `
-            <div style="font-weight: 600; margin-bottom: 6px; color: var(--primary-color);">Pasangan Padanan (Kiri Padan dengan Kanan):</div>
-            <div id="padananContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
-        `;
-        pasangan.forEach(p => {
-            html += `
-                <div class="padanan-row" style="display: flex; gap: 8px; align-items: center;">
-                    <input type="text" class="form-control padanan-kiri" placeholder="Sebelah Kiri (cth: مُفْرَد)" value="${escapeAttr(p.kiri)}" required>
-                    <span>↔</span>
-                    <input type="text" class="form-control padanan-kanan" placeholder="Sebelah Kanan (cth: Tunggal)" value="${escapeAttr(p.kanan)}" required>
-                    <button type="button" class="btn btn-danger btn-remove-padanan" style="padding: 4px 8px;">X</button>
-                </div>
-            `;
-        });
-        html += `
-            </div>
-            <button type="button" class="btn btn-primary" id="btnTambahBarisPadanan" style="padding: 4px 10px; font-size: 0.8rem;">+ Tambah Pasangan</button>
-        `;
-        dynamicQuizBuilderBox.innerHTML = html;
-
-        const btnAddPadanan = dynamicQuizBuilderBox.querySelector("#btnTambahBarisPadanan");
-        if (btnAddPadanan) {
-            btnAddPadanan.addEventListener("click", () => {
-                const c = dynamicQuizBuilderBox.querySelector("#padananContainer");
-                const div = document.createElement("div");
-                div.className = "padanan-row";
-                div.style = "display: flex; gap: 8px; align-items: center;";
-                div.innerHTML = `
-                    <input type="text" class="form-control padanan-kiri" placeholder="Sebelah Kiri" required>
-                    <span>↔</span>
-                    <input type="text" class="form-control padanan-kanan" placeholder="Sebelah Kanan" required>
-                    <button type="button" class="btn btn-danger btn-remove-padanan" style="padding: 4px 8px;">X</button>
-                `;
-                div.querySelector(".btn-remove-padanan").addEventListener("click", () => div.remove());
-                c.appendChild(div);
-            });
-        }
-
-        dynamicQuizBuilderBox.querySelectorAll(".btn-remove-padanan").forEach(btn => {
-            btn.addEventListener("click", (e) => e.target.closest(".padanan-row").remove());
-        });
-    }
-}
-
-if (kuizJenisInput) {
-    kuizJenisInput.addEventListener("change", (e) => {
-        renderQuizInputFields(e.target.value);
-    });
-}
-
-if (btnBukaBorangKuiz) {
-    btnBukaBorangKuiz.addEventListener("click", () => {
+if (btnBukaBorangQuran) {
+    btnBukaBorangQuran.addEventListener("click", () => {
         closeForm();
         closeFormAyat();
-        kuizForm.reset();
-        kuizIdInput.value = "";
-        formKuizTitle.textContent = "Tambah Soalan Kuiz Baru";
-        renderQuizInputFields(kuizJenisInput.value);
-        formKuizSection.classList.add("active");
-        formKuizSection.scrollIntoView({ behavior: "smooth" });
+        quranForm.reset();
+        inputQuranId.value = "";
+        formQuranTitle.textContent = "Tambah Ayat Al-Quran Baru";
+        formQuranSection.classList.add("active");
+        formQuranSection.scrollIntoView({ behavior: "smooth" });
     });
 }
 
-if (btnBatalKuiz) btnBatalKuiz.addEventListener("click", closeFormKuiz);
+if (btnBatalQuran) btnBatalQuran.addEventListener("click", closeFormQuran);
 
-function closeFormKuiz() {
-    if (!formKuizSection) return;
-    formKuizSection.classList.remove("active");
-    if (kuizForm) kuizForm.reset();
-    if (kuizIdInput) kuizIdInput.value = "";
-    if (dynamicQuizBuilderBox) dynamicQuizBuilderBox.innerHTML = "";
+function closeFormQuran() {
+    if (!formQuranSection) return;
+    formQuranSection.classList.remove("active");
+    if (quranForm) quranForm.reset();
+    if (inputQuranId) inputQuranId.value = "";
 }
 
-if (kuizForm) {
-    kuizForm.addEventListener("submit", async (e) => {
+if (quranForm) {
+    quranForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        const noSurahClean = inputQuranNoSurah ? inputQuranNoSurah.value.trim() : "";
+        const namaSurahClean = inputQuranSurah.value.trim().replace(/^surah\s+/i, "");
+        const noAyatClean = inputQuranNoAyat ? inputQuranNoAyat.value.trim() : "";
 
-        const jenis = kuizJenisInput.value;
-        let dataSoalanJson = {};
-
-        if (jenis === "pilihan") {
-            const optionInputs = dynamicQuizBuilderBox.querySelectorAll(".opt-input");
-            const options = Array.from(optionInputs).map(inp => inp.value.trim());
-            const selectedRadio = dynamicQuizBuilderBox.querySelector("input[name='pilihanJawapanBetul']:checked");
-            const correctIdx = selectedRadio ? parseInt(selectedRadio.value, 10) : 0;
-
-            dataSoalanJson = { options: options, jawapan_betul: correctIdx };
-        } else if (jenis === "betul_salah") {
-            const selectedRadio = dynamicQuizBuilderBox.querySelector("input[name='jawapanBetulSalah']:checked");
-            dataSoalanJson = { jawapan_betul: selectedRadio ? selectedRadio.value === "true" : true };
-        } else if (jenis === "isi_kosong") {
-            const rawAnswers = dynamicQuizBuilderBox.querySelector("#jawapanIsiKosong").value;
-            const petunjuk = dynamicQuizBuilderBox.querySelector("#petunjukIsiKosong").value.trim();
-            const answersList = rawAnswers.split(",").map(a => a.trim()).filter(a => a);
-
-            dataSoalanJson = { jawapan_betul: answersList, petunjuk: petunjuk };
-        } else if (jenis === "padanan") {
-            const rows = dynamicQuizBuilderBox.querySelectorAll(".padanan-row");
-            const pasanganList = [];
-            rows.forEach(r => {
-                const k = r.querySelector(".padanan-kiri").value.trim();
-                const kn = r.querySelector(".padanan-kanan").value.trim();
-                if (k && kn) pasanganList.push({ kiri: k, kanan: kn });
-            });
-
-            if (pasanganList.length < 2) {
-                alert("Sila masukkan sekurang-kurangnya 2 pasangan padanan.");
-                return;
-            }
-            dataSoalanJson = { pasangan: pasanganList };
-        }
+        // Format seragam disimpan dalam lajur surah_ayat: "1. Surah Al-Fatihah : Ayat 1"
+        const gabunganSurahAyat = `${noSurahClean}. Surah ${namaSurahClean} : Ayat ${noAyatClean}`;
 
         const payload = {
-            tajuk_soalan: kuizTajukInput.value.trim(),
-            jenis_soalan: jenis,
-            kategori: kuizKategoriInput.value,
-            data_soalan: dataSoalanJson,
-            penerangan: kuizPeneranganInput.value.trim()
+            surah_ayat: gabunganSurahAyat,
+            ayat_ar: inputQuranAyatAr.value.trim(),
+            makna_mudah: sanitizeEditorHtml(inputQuranMaknaMudah.value.trim()),
+            makna_literal: sanitizeEditorHtml(inputQuranMaknaLiteral.value.trim())
         };
 
-        if (kuizIdInput.value) {
-            payload.id = kuizIdInput.value;
+        if (inputQuranId.value) {
+            payload.id = inputQuranId.value;
         }
 
-        const { error } = await supabaseClient.from("koleksi_kuiz").upsert([payload]);
-
+        const { error } = await supabaseClient.from("koleksi_quran").upsert([payload]);
         if (error) {
             alert("Ralat Keselamatan RLS / Sistem: " + error.message);
         } else {
-            closeFormKuiz();
+            closeFormQuran();
             await loadDataFromSupabase();
         }
     });
 }
 
-function renderAdminKuizList(filterText = "") {
-    if (!adminTableKuizBody) return;
-    adminTableKuizBody.innerHTML = "";
+function renderAdminQuranList(filterText = "") {
+    if (!adminTableQuranBody) return;
+    adminTableQuranBody.innerHTML = "";
     const lowerFilter = filterText.toLowerCase();
 
-    const filtered = dataKuiz.filter(item => {
-        return (item.tajuk_soalan || "").toLowerCase().includes(lowerFilter) ||
-               (item.jenis_soalan || "").toLowerCase().includes(lowerFilter) ||
-               (item.kategori || "").toLowerCase().includes(lowerFilter);
+    const filteredData = dataQuran.filter(item => {
+        const surah = (item.surah_ayat || "").toLowerCase();
+        const ar = (item.ayat_ar || "").toLowerCase();
+        const mudah = stripHtml(item.makna_mudah).toLowerCase();
+        const literal = stripHtml(item.makna_literal).toLowerCase();
+        return surah.includes(lowerFilter) ||
+               ar.includes(lowerFilter) ||
+               mudah.includes(lowerFilter) ||
+               literal.includes(lowerFilter);
     });
 
-    if (filtered.length === 0) {
-        adminTableKuizBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">Tiada soalan kuiz dijumpai.</td></tr>`;
+    if (filteredData.length === 0) {
+        adminTableQuranBody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding: 24px; color: var(--text-muted);">Tiada rekod ayat Al-Quran dijumpai.</td></tr>`;
         return;
     }
 
-    filtered.forEach(item => {
+    filteredData.forEach((item, index) => {
         const tr = document.createElement("tr");
-
-        let formatText = "Aneka Pilihan";
-        if (item.jenis_soalan === "betul_salah") formatText = "Betul/Salah";
-        else if (item.jenis_soalan === "isi_kosong") formatText = "Isi Kosong";
-        else if (item.jenis_soalan === "padanan") formatText = "Padanan";
-
-        let katText = "Sorof";
-        if (item.kategori === "nahu") katText = "Nahu";
-        else if (item.kategori === "nombor") katText = "Penomboran";
+        const info = parseSurahAyat(item.surah_ayat);
 
         tr.innerHTML = `
-            <td><strong>${escapeHtml(item.tajuk_soalan)}</strong></td>
-            <td><span class="badge" style="background:#e0e7ff; color:#4338ca;">${escapeHtml(formatText)}</span></td>
-            <td><span class="badge">${escapeHtml(katText)}</span></td>
+            <td class="td-arabic" style="font-size: 1.2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; direction: ltr; margin-bottom: 8px;">
+                    <span class="badge" style="background:#e2e8f0; color:#334155;">#${index + 1}</span>
+                    <span class="badge" style="background:#ccfbf1; color:#0f766e;">📖 ${escapeHtml(info.labelPenuhBadge)}</span>
+                </div>
+                ${escapeHtml(item.ayat_ar)}
+            </td>
+            <td>
+                <div style="margin-bottom: 8px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #047857; text-transform: uppercase;">📖 Makna Mudah:</span><br>
+                    <span>${escapeHtml(stripHtml(item.makna_mudah))}</span>
+                </div>
+                <div>
+                    <span style="font-size: 0.75rem; font-weight: 700; color: #0369a1; text-transform: uppercase;">🔍 Makna Literal:</span><br>
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(stripHtml(item.makna_literal))}</span>
+                </div>
+            </td>
             <td>
                 <div class="actions-cell" style="display:flex; gap:6px;">
-                    <button class="btn btn-edit" type="button" data-action="edit-kuiz" data-id="${escapeAttr(item.id)}">Ubah</button>
-                    <button class="btn btn-danger" type="button" data-action="delete-kuiz" data-id="${escapeAttr(item.id)}">Padam</button>
+                    <button class="btn btn-edit" type="button" data-action="edit-quran" data-id="${escapeAttr(item.id)}">Ubah</button>
+                    <button class="btn btn-danger" type="button" data-action="delete-quran" data-id="${escapeAttr(item.id)}">Padam</button>
                 </div>
             </td>
         `;
-        adminTableKuizBody.appendChild(tr);
+        adminTableQuranBody.appendChild(tr);
     });
 }
 
-if (adminSearchKuizInput) {
-    adminSearchKuizInput.addEventListener("input", (e) => {
-        renderAdminKuizList(e.target.value.trim());
-    });
+if (adminSearchQuranInput) {
+    adminSearchQuranInput.addEventListener("input", (e) => renderAdminQuranList(e.target.value.trim()));
 }
 
-function editKuiz(id) {
-    const item = dataKuiz.find(q => String(q.id) === String(id));
+function editQuran(id) {
+    const item = dataQuran.find(i => String(i.id) === String(id));
     if (!item) return;
-
     closeForm();
     closeFormAyat();
 
-    formKuizTitle.textContent = "Ubah Soalan Kuiz";
-    kuizIdInput.value = item.id;
-    kuizTajukInput.value = item.tajuk_soalan;
-    kuizKategoriInput.value = item.kategori;
-    kuizJenisInput.value = item.jenis_soalan;
-    kuizPeneranganInput.value = item.penerangan || "";
+    const info = parseSurahAyat(item.surah_ayat);
+    formQuranTitle.textContent = "Ubah Ayat Al-Quran";
+    inputQuranId.value = item.id;
+    if (inputQuranNoSurah) inputQuranNoSurah.value = info.noSurah < 999 ? info.noSurah : "";
+    inputQuranSurah.value = info.namaSurah;
+    if (inputQuranNoAyat) inputQuranNoAyat.value = info.noAyatStr;
+    inputQuranAyatAr.value = item.ayat_ar || "";
+    inputQuranMaknaMudah.value = item.makna_mudah || "";
+    inputQuranMaknaLiteral.value = item.makna_literal || "";
 
-    renderQuizInputFields(item.jenis_soalan, item.data_soalan);
-
-    formKuizSection.classList.add("active");
-    formKuizSection.scrollIntoView({ behavior: "smooth" });
+    formQuranSection.classList.add("active");
+    formQuranSection.scrollIntoView({ behavior: "smooth" });
 }
 
-async function deleteKuiz(id) {
-    if (confirm("Adakah anda pasti mahu memadam soalan kuiz ini?")) {
-        const { error } = await supabaseClient.from("koleksi_kuiz").delete().eq("id", id);
+async function deleteQuran(id) {
+    if (confirm("Adakah anda pasti mahu memadam rekod ayat Al-Quran ini?")) {
+        const { error } = await supabaseClient.from("koleksi_quran").delete().eq("id", id);
         if (error) alert("Ralat Keselamatan RLS: " + error.message);
         else await loadDataFromSupabase();
     }
@@ -1495,7 +1216,7 @@ if (terjemahanMsEditor) terjemahanMsEditor.addEventListener("input", updateKeywo
 if (btnBukaBorangAyat) {
     btnBukaBorangAyat.addEventListener("click", () => {
         closeForm();
-        closeFormKuiz();
+        closeFormQuran();
         ayatForm.reset();
         inputAyatId.value = "";
         ayatArEditor.innerHTML = "";
@@ -1570,8 +1291,8 @@ document.addEventListener("click", (e) => {
         case "delete-ayat": deleteAyat(id); break;
         case "edit-item": editItem(id); break;
         case "delete-item": deleteItem(id); break;
-        case "edit-kuiz": editKuiz(id); break;
-        case "delete-kuiz": deleteKuiz(id); break;
+        case "edit-quran": editQuran(id); break;
+        case "delete-quran": deleteQuran(id); break;
     }
 });
 
@@ -1601,7 +1322,7 @@ function editAyat(id) {
     const item = dataAyat.find(i => String(i.id) === String(id));
     if (!item) return;
     closeForm();
-    closeFormKuiz();
+    closeFormQuran();
     formAyatTitle.textContent = "Ubah Koleksi Ayat";
     inputAyatId.value = item.id;
     ayatArEditor.innerHTML = sanitizeEditorHtml(item.ayat_ar || "");
@@ -2023,7 +1744,7 @@ function editItem(id) {
     const item = dataIstilah.find(i => String(i.id) === String(id));
     if (!item) return;
     closeFormAyat();
-    closeFormKuiz();
+    closeFormQuran();
     formTitle.textContent = "Ubah Maklumat Istilah";
     inputId.value = item.id;
     inputTitleMs.value = item.title_ms;
@@ -2075,7 +1796,7 @@ async function deleteItem(id) {
 if (btnBukaBorang) {
     btnBukaBorang.addEventListener("click", () => {
         closeFormAyat();
-        closeFormKuiz();
+        closeFormQuran();
         termForm.reset();
         inputId.value = "";
         ciriSectionsContainer.innerHTML = "";
@@ -2429,7 +2150,7 @@ function updateAdminUI(session) {
         adminDashboardBox.style.display = "block";
         renderAdminList();
         renderAdminAyatList();
-        renderAdminKuizList();
+        renderAdminQuranList();
     } else {
         adminAuthBox.style.display = "block";
         adminDashboardBox.style.display = "none";
