@@ -1854,7 +1854,7 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
                 <button type="button" class="toolbar-btn" data-format-target="${uniqueId}" data-format="i"><i>I</i></button>
                 <button type="button" class="toolbar-btn" data-format-target="${uniqueId}" data-format="bullet">• Senarai</button>
                 <div class="color-picker-wrapper">
-                    <input type="color" class="toolbar-color" data-format-target="${uniqueId}" data-format="color">
+                    <input type="color" value="#000000" class="toolbar-color" data-format-target="${uniqueId}" data-format="color">
                 </div>
             </div>
             <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${escapeHtml(contentVal)}</textarea>
