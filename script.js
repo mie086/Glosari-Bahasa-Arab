@@ -1377,7 +1377,7 @@ function renderAlphabeticalDirectory() {
         letterGroup.className = "dir-letter-group";
         letterGroup.innerHTML = `
             <div class="dir-letter-header">
-                <span>Huruf ${letter} (${groups[letter].length} Istilah)</span>
+                <span>Huruf ${escapeHtml(letter)} (${groups[letter].length} Istilah)</span>
                 <span class="dir-toggle-icon">▼</span>
             </div>
             <div class="dir-letter-content">
