@@ -263,7 +263,7 @@ function susunIkutSurahDanAyat(list) {
         const cmpNama = pA.namaSurah.localeCompare(pB.namaSurah, "ms", { numeric: true });
         if (cmpNama !== 0) return cmpNama;
         if (pA.noAyatInt !== pB.noAyatInt) return pA.noAyatInt - pB.noAyatInt;
-        return pA.noAyatStr.localeCompare(b.noAyatStr || "", "ms", { numeric: true });
+        return pA.noAyatStr.localeCompare(pB.noAyatStr || "", "ms", { numeric: true });
     });
 }
 
