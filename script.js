@@ -77,12 +77,26 @@ function sanitizeEditorHtml(html) {
 }
 
 // ============================================================================
+// KAWALAN KEBOLEHCAPAIAN SAIZ TEKS (A-, A, A+, A++)
+// ============================================================================
+const scaleButtons = document.querySelectorAll(".scale-btn");
+scaleButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        const scaleVal = btn.getAttribute("data-scale") || "1";
+        document.documentElement.style.setProperty("--font-scale", scaleVal);
+        scaleButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+    });
+});
+
+// ============================================================================
 // PEMBOLEHUBAH GLOBAL & STATE
 // ============================================================================
 let dataIstilah = [];
 let dataAyat = [];
 let dataQuran = [];
 let currentSearch = "";
+let currentDirectoryCategory = "semua";
 let selectedSearchItem = null;
 let selectedAyatItem = null;
 let lastFocusedTableInput = null;
@@ -101,8 +115,10 @@ const searchInput = document.getElementById("searchInput");
 const suggestionsList = document.getElementById("suggestionsList");
 const resultsList = document.getElementById("resultsList");
 const alphabeticalDirectory = document.getElementById("alphabeticalDirectory");
+const directoryFilterPills = document.getElementById("directoryFilterPills");
 const searchAyatInput = document.getElementById("searchAyatInput");
 const suggestionsAyatList = document.getElementById("suggestionsAyatList");
+const quickSelectAyat = document.getElementById("quickSelectAyat");
 const resultsAyatList = document.getElementById("resultsAyatList");
 
 // DOM Elements: Mod Hafalan
@@ -167,9 +183,9 @@ const btnBukaBorangQuran = document.getElementById("btnBukaBorangQuran");
 const btnBatalQuran = document.getElementById("btnBatalQuran");
 const formQuranTitle = document.getElementById("formQuranTitle");
 const inputQuranId = document.getElementById("quranId");
-const inputQuranNoSurah = document.getElementById("quranNoSurah"); 
+const inputQuranNoSurah = document.getElementById("quranNoSurah");
 const inputQuranSurah = document.getElementById("quranSurah");
-const inputQuranNoAyat = document.getElementById("quranNoAyat");   
+const inputQuranNoAyat = document.getElementById("quranNoAyat");
 const inputQuranAyatAr = document.getElementById("quranAyatAr");
 const inputQuranMaknaMudah = document.getElementById("quranMaknaMudah");
 const inputQuranMaknaLiteral = document.getElementById("quranMaknaLiteral");
@@ -224,7 +240,6 @@ if (btnFloatingSearch) {
 // ============================================================================
 function parseSurahAyat(rawStr) {
     const teks = (rawStr || "").trim();
-    // Format standard: "[002] Surah Al-Baqarah : Ayat 255" atau "2. Surah Al-Baqarah: 255"
     const match = teks.match(/^(?:\[?(\d+)\]?[\.\-\s]*)?([^:]+?)(?:\s*:\s*(?:Ayat\s*)?(.+))?$/i);
     if (!match) {
         return {
@@ -238,7 +253,7 @@ function parseSurahAyat(rawStr) {
     }
 
     const noSurah = match[1] ? parseInt(match[1], 10) : 999;
-    let namaSurah = (match[2] || "").trim().replace(/^surah\s+/i, "");
+    const namaSurah = (match[2] || "").trim().replace(/^surah\s+/i, "");
     const noAyatStr = (match[3] || "").trim();
     const noAyatInt = noAyatStr ? (parseInt(noAyatStr, 10) || 9999) : 9999;
 
@@ -280,7 +295,6 @@ function kemaskiniSenaraiSurahDropdown() {
         }
     });
 
-    // Susun dropdown mengikut No. Surah (1 -> 114)
     const senaraiSurah = Array.from(surahMap.values())
         .sort((a, b) => a.noSurah !== b.noSurah ? a.noSurah - b.noSurah : a.namaSurah.localeCompare(b.namaSurah, "ms"))
         .map(info => info.labelSurahDropdown);
@@ -299,6 +313,33 @@ function kemaskiniSenaraiSurahDropdown() {
         const unikNama = Array.from(new Set(Array.from(surahMap.values()).map(i => i.namaSurah)));
         datalistAdmin.innerHTML = unikNama.map(n => `<option value="${escapeAttr(n)}"></option>`).join("");
     }
+}
+
+function kemaskiniQuickSelectAyat() {
+    if (!quickSelectAyat) return;
+    quickSelectAyat.innerHTML = `<option value="">-- Pilih Contoh Ayat (${dataAyat.length} Ayat Tersedia) --</option>` +
+        dataAyat.map((item, idx) => {
+            const teksMs = stripHtml(item.terjemahan_ms).trim();
+            const ringkasMs = teksMs.length > 55 ? teksMs.substring(0, 55) + "..." : teksMs;
+            return `<option value="${escapeAttr(item.id)}">${idx + 1}. ${escapeHtml(ringkasMs)}</option>`;
+        }).join("");
+}
+
+if (quickSelectAyat) {
+    quickSelectAyat.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (!val) {
+            selectedAyatItem = null;
+            renderSearchAyatCard();
+            return;
+        }
+        const found = dataAyat.find(item => String(item.id) === String(val));
+        if (found) {
+            selectedAyatItem = found;
+            renderSearchAyatCard();
+            resultsAyatList.scrollIntoView({ behavior: "smooth" });
+        }
+    });
 }
 
 async function loadDataFromSupabase() {
@@ -325,6 +366,7 @@ async function loadDataFromSupabase() {
     renderAlphabeticalDirectory();
     kemaskiniSenaraiDatalist();
     kemaskiniSenaraiSurahDropdown();
+    kemaskiniQuickSelectAyat();
     initHafalanDeck();
 }
 
@@ -382,10 +424,6 @@ function initHafalanDeck(shouldShuffle = false) {
     const surahPilihan = hafalanSurah ? hafalanSurah.value : "semua";
     const arahAyat = hafalanArahAyat ? hafalanArahAyat.value : "ar_ke_ms";
 
-    // Kawal paparan dropdown mengikut Sumber Hafalan:
-    // - Istilah: Sumber | Pilihan Hafalan (Kategori)
-    // - Ayat: Sumber | Pilihan Hafalan (Arah)
-    // - Quran: Sumber | Pilihan Surah (Tengah) | Pilihan Hafalan (Arah)
     if (hafalanKategoriGroup) {
         hafalanKategoriGroup.style.display = sumber === "istilah" ? "block" : "none";
     }
@@ -414,10 +452,9 @@ function initHafalanDeck(shouldShuffle = false) {
     } else if (sumber === "ayat") {
         rawList = dataAyat.map(item => {
             const notaKataKunci = item.kata_kunci
-                ? `<div style="margin-top: 12px; font-size: 0.8rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
+                ? `<div style="margin-top: 12px; font-size: 0.82rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
                 : "";
 
-            // Pilihan 1: Teka daripada Bahasa Melayu -> Bahasa Arab
             if (arahAyat === "ms_ke_ar") {
                 return {
                     id: "ayat-" + item.id,
@@ -427,12 +464,11 @@ function initHafalanDeck(shouldShuffle = false) {
                     frontCustomHtml: "",
                     backTitle: "Bahasa Arab",
                     backContentHtml:
-                        `<div style="font-family: var(--font-arabic); font-size: 2.1rem; color: var(--accent-color); direction: rtl; line-height: 1.8;">${sanitizeHtml(item.ayat_ar)}</div>` +
+                        `<div style="font-family: var(--font-arabic); font-size: calc(2.2rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.8;">${sanitizeHtml(item.ayat_ar)}</div>` +
                         notaKataKunci
                 };
             }
 
-            // Pilihan 2 (Default): Teka daripada Bahasa Arab -> Bahasa Melayu
             return {
                 id: "ayat-" + item.id,
                 frontSub: "Bahasa Arab",
@@ -441,7 +477,7 @@ function initHafalanDeck(shouldShuffle = false) {
                 frontCustomHtml: "",
                 backTitle: "Bahasa Melayu",
                 backContentHtml:
-                    `<div style="font-size: 1.15rem; font-weight: 600; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
+                    `<div style="font-size: calc(1.18rem * var(--font-scale)); font-weight: 700; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
                     notaKataKunci
             };
         });
@@ -468,7 +504,6 @@ function initHafalanDeck(shouldShuffle = false) {
                 </div>
             `;
 
-            // Pilihan 1: Melayu (Makna Mudah & Literal) -> Arab (Ayat Al-Quran)
             if (arahAyat === "ms_ke_ar") {
                 return {
                     id: "quran-" + item.id,
@@ -477,11 +512,10 @@ function initHafalanDeck(shouldShuffle = false) {
                     frontMainMs: "",
                     frontCustomHtml: htmlDuaMaknaMelayu,
                     backTitle: "Ayat Al-Quran" + labelSurah,
-                    backContentHtml: `<div style="font-family: var(--font-arabic); font-size: 2.2rem; color: var(--accent-color); direction: rtl; line-height: 1.85;">${escapeHtml(item.ayat_ar)}</div>`
+                    backContentHtml: `<div style="font-family: var(--font-arabic); font-size: calc(2.3rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.85;">${escapeHtml(item.ayat_ar)}</div>`
                 };
             }
 
-            // Pilihan 2 (Default): Arab (Ayat Al-Quran) -> Melayu (Makna Mudah & Literal)
             return {
                 id: "quran-" + item.id,
                 frontSub: "Ayat Al-Quran" + labelSurah,
@@ -665,7 +699,7 @@ if (btnTabJadualQuran) {
         resetTabJadual();
         jadualQuranWrapper.style.display = "block";
         btnTabJadualQuran.classList.replace("btn-secondary", "btn-primary");
-        btnTabJadualQuran.style.backgroundColor = "#0d9488";
+        btnTabJadualQuran.style.backgroundColor = "var(--teal-color)";
         btnTabJadualQuran.style.color = "#ffffff";
     });
 }
@@ -701,7 +735,6 @@ if (quranForm) {
         const namaSurahClean = inputQuranSurah.value.trim().replace(/^surah\s+/i, "");
         const noAyatClean = inputQuranNoAyat ? inputQuranNoAyat.value.trim() : "";
 
-        // Format seragam disimpan dalam lajur surah_ayat: "1. Surah Al-Fatihah : Ayat 1"
         const gabunganSurahAyat = `${noSurahClean}. Surah ${namaSurahClean} : Ayat ${noAyatClean}`;
 
         const payload = {
@@ -751,7 +784,7 @@ function renderAdminQuranList(filterText = "") {
         const info = parseSurahAyat(item.surah_ayat);
 
         tr.innerHTML = `
-            <td class="td-arabic" style="font-size: 1.2rem;">
+            <td class="td-arabic">
                 <div style="display: flex; justify-content: space-between; align-items: center; direction: ltr; margin-bottom: 8px;">
                     <span class="badge" style="background:#e2e8f0; color:#334155;">#${index + 1}</span>
                     <span class="badge" style="background:#ccfbf1; color:#0f766e;">📖 ${escapeHtml(info.labelPenuhBadge)}</span>
@@ -760,12 +793,12 @@ function renderAdminQuranList(filterText = "") {
             </td>
             <td>
                 <div style="margin-bottom: 8px;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #047857; text-transform: uppercase;">📖 Makna Mudah:</span><br>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #047857; text-transform: uppercase;">📖 Makna Mudah:</span><br>
                     <span>${escapeHtml(stripHtml(item.makna_mudah))}</span>
                 </div>
                 <div>
-                    <span style="font-size: 0.75rem; font-weight: 700; color: #0369a1; text-transform: uppercase;">🔍 Makna Literal:</span><br>
-                    <span style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(stripHtml(item.makna_literal))}</span>
+                    <span style="font-size: 0.75rem; font-weight: 800; color: #0369a1; text-transform: uppercase;">🔍 Makna Literal:</span><br>
+                    <span style="color: var(--text-muted); font-size: 0.88rem;">${escapeHtml(stripHtml(item.makna_literal))}</span>
                 </div>
             </td>
             <td>
@@ -845,18 +878,19 @@ function handleSearchAyatInput(e) {
             const div = document.createElement("div");
             div.className = "suggestion-item";
             const keywordsHtml = item.kata_kunci && item.kata_kunci.trim() !== ""
-                ? `<div style="font-size: 0.75rem; color: var(--accent-color); margin-top: 6px; display: flex; align-items: center; gap: 4px; font-weight: 500;"><span>🏷️</span> <span>${escapeHtml(item.kata_kunci)}</span></div>`
+                ? `<div style="font-size: 0.75rem; color: var(--accent-color); margin-top: 4px; display: flex; align-items: center; gap: 4px; font-weight: 600;"><span>🏷️</span> <span>${escapeHtml(item.kata_kunci)}</span></div>`
                 : "";
             div.innerHTML = `
                 <div class="suggestion-info" style="display: flex; flex-direction: column; justify-content: center;">
-                    <span class="suggestion-title">${escapeHtml(stripHtml(item.terjemahan_ms).substring(0, 40))}...</span>
+                    <span class="suggestion-title">${escapeHtml(stripHtml(item.terjemahan_ms).substring(0, 45))}...</span>
                     ${keywordsHtml}
                 </div>
-                <div class="suggestion-arabic">${escapeHtml(stripHtml(item.ayat_ar).substring(0, 30))}...</div>
+                <div class="suggestion-arabic">${escapeHtml(stripHtml(item.ayat_ar).substring(0, 32))}...</div>
             `;
             div.addEventListener("click", () => {
                 selectedAyatItem = item;
                 searchAyatInput.value = "";
+                if (quickSelectAyat) quickSelectAyat.value = String(item.id);
                 suggestionsAyatList.style.display = "none";
                 renderSearchAyatCard();
                 resultsAyatList.scrollIntoView({ behavior: "smooth" });
@@ -877,8 +911,8 @@ function renderSearchAyatCard() {
     if (!selectedAyatItem) {
         resultsAyatList.innerHTML = `
             <div class="welcome-message">
-                <strong>Koleksi Ayat & Terjemahan</strong><br>
-                Sila taip kata dasar atau rujukan tatabahasa di atas untuk memaparkan senarai ayat.
+                <strong>Koleksi Ayat & Analisis Tatabahasa Interaktif</strong><br>
+                Taip kata kunci di atas atau pilih terus daripada menu pilihan ayat untuk melihat analisis perkataan Sorof, Nahu, dan 'Adad.
             </div>
         `;
         return;
@@ -921,7 +955,7 @@ function renderSearchAyatCard() {
         if (sorofSet.size > 0) {
             sHtml = `
                 <div style="margin-bottom: 16px;">
-                    <div style="font-size: 0.75rem; color: #059669; text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Morfologi (Ilmu Sorof)</div>
+                    <div style="font-size: 0.75rem; color: #059669; text-align: center; margin-bottom: 8px; font-weight: 800; text-transform: uppercase;">Morfologi (Ilmu Sorof)</div>
                     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
                         ${Array.from(sorofSet).map(kw => `<span class="badge-keyword badge-sorof" data-target="${escapeAttr(kw)}" data-type="sorof">${escapeHtml(kw)}</span>`).join("")}
                     </div>
@@ -931,7 +965,7 @@ function renderSearchAyatCard() {
         if (nahuSet.size > 0) {
             nHtml = `
                 <div style="margin-bottom: 12px;">
-                    <div style="font-size: 0.75rem; color: #0284c7; text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Sintaksis (Ilmu Nahu)</div>
+                    <div style="font-size: 0.75rem; color: #0284c7; text-align: center; margin-bottom: 8px; font-weight: 800; text-transform: uppercase;">Sintaksis (Ilmu Nahu)</div>
                     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
                         ${Array.from(nahuSet).map(kw => `<span class="badge-keyword badge-nahu" data-target="${escapeAttr(kw)}" data-type="nahu">${escapeHtml(kw)}</span>`).join("")}
                     </div>
@@ -941,7 +975,7 @@ function renderSearchAyatCard() {
         if (nomborSet.size > 0) {
             nomHtml = `
                 <div style="margin-bottom: 12px;">
-                    <div style="font-size: 0.75rem; color: #7e22ce; text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Penomboran ('Adad)</div>
+                    <div style="font-size: 0.75rem; color: #7e22ce; text-align: center; margin-bottom: 8px; font-weight: 800; text-transform: uppercase;">Penomboran ('Adad)</div>
                     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
                         ${Array.from(nomborSet).map(kw => `<span class="badge-keyword badge-nombor" data-target="${escapeAttr(kw)}" data-type="nombor">${escapeHtml(kw)}</span>`).join("")}
                     </div>
@@ -951,7 +985,7 @@ function renderSearchAyatCard() {
         if (legacySet.size > 0 && sorofSet.size === 0 && nahuSet.size === 0 && nomborSet.size === 0) {
             lHtml = `
                 <div style="margin-bottom: 12px;">
-                    <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 8px; font-weight: 700; text-transform: uppercase;">Kata Kunci</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 8px; font-weight: 800; text-transform: uppercase;">Kata Kunci</div>
                     <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
                         ${Array.from(legacySet).map(kw => `<span class="badge-keyword" data-target="${escapeAttr(kw)}" data-type="legacy">${escapeHtml(kw)}</span>`).join("")}
                     </div>
@@ -960,8 +994,8 @@ function renderSearchAyatCard() {
         }
 
         badgesHtml = `
-            <div style="background-color: #f8fafc; border-top: 1px solid var(--border-color); padding: 20px; margin: 24px -20px -20px -20px;">
-                <div style="font-size: 0.85rem; color: var(--text-muted); text-align: center; margin-bottom: 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Pilih Kata Kunci Untuk Serlahkan Ayat</div>
+            <div style="background-color: #f8fafc; border-top: 1px solid var(--border-color); padding: 20px; margin: 24px -24px -24px -24px;">
+                <div style="font-size: 0.82rem; color: var(--text-muted); text-align: center; margin-bottom: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">👇 Klik Lencana Di Bawah Untuk Menyerlahkan Perkataan & Nota Definisi</div>
                 ${sHtml}${nHtml}${nomHtml}${lHtml}
                 <div id="dynamicDefBox" class="keyword-definition-box">
                     <div class="kw-def-title"><span id="defTitleMs"></span><span id="defTitleAr" class="kw-def-ar"></span></div>
@@ -973,10 +1007,10 @@ function renderSearchAyatCard() {
 
     card.innerHTML = `
         <div class="card-body">
-            <div style="text-align: center; font-family: var(--font-arabic); font-size: 2.2rem; color: var(--accent-color); direction: rtl; line-height: 1.8; margin-bottom: 24px; margin-top: 10px;">
+            <div style="text-align: center; font-family: var(--font-arabic); font-size: calc(2.35rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.85; margin-bottom: 24px; margin-top: 6px;">
                 ${displayAyatAr}
             </div>
-            <div style="border-top: 1px dashed var(--border-color); padding-top: 20px; font-size: 1.15rem; color: #2d3748; line-height: 1.6; text-align: center;">
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 20px; font-size: calc(1.15rem * var(--font-scale)); color: var(--primary-color); line-height: 1.65; text-align: center;">
                 <strong>Maksud:</strong><br>${displayTerjemahan}
             </div>
             ${badgesHtml}
@@ -1261,10 +1295,10 @@ function renderAdminAyatList(filterText = "") {
     filteredData.forEach(item => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td class="td-arabic" style="font-size: 1.1rem;">${escapeHtml(stripHtml(item.ayat_ar))}</td>
+            <td class="td-arabic">${escapeHtml(stripHtml(item.ayat_ar))}</td>
             <td>
                 <strong>${escapeHtml(stripHtml(item.terjemahan_ms))}</strong><br>
-                <span style="font-size: 0.75rem; color: var(--text-muted);">Kata kunci: ${escapeHtml(item.kata_kunci)}</span>
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Kata kunci: ${escapeHtml(item.kata_kunci)}</span>
             </td>
             <td>
                 <div class="actions-cell" style="display:flex; gap:6px;">
@@ -1346,20 +1380,40 @@ async function deleteAyat(id) {
 }
 
 // ============================================================================
-// DIREKTORI ABJAD, CARIAN ISTILAH, DAN ADMIN ISTILAH
+// DIREKTORI ABJAD, PENAPIS KATEGORI, CARIAN ISTILAH & ADMIN ISTILAH
 // ============================================================================
+if (directoryFilterPills) {
+    directoryFilterPills.addEventListener("click", (e) => {
+        const btn = e.target.closest(".pill-btn");
+        if (!btn) return;
+        currentDirectoryCategory = btn.getAttribute("data-cat") || "semua";
+        directoryFilterPills.querySelectorAll(".pill-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        renderAlphabeticalDirectory();
+    });
+}
+
 function renderAlphabeticalDirectory() {
     if (!alphabeticalDirectory) return;
+
+    const filteredByCat = dataIstilah.filter(item => {
+        if (currentDirectoryCategory === "semua") return true;
+        return item.disiplin_ilmu === currentDirectoryCategory;
+    });
+
     alphabeticalDirectory.innerHTML = `
         <div class="directory-container">
-            <div class="directory-title">📁 Senarai Indeks Istilah (Ikut Abjad)</div>
+            <div class="directory-title">
+                <span>📁 Senarai Indeks Istilah (Ikut Abjad)</span>
+                <span class="badge" style="background:#e0f2fe; color:#0369a1;">${filteredByCat.length} Istilah</span>
+            </div>
             <div id="directoryGroups"></div>
         </div>
     `;
     const groupsDiv = document.getElementById("directoryGroups");
     const groups = {};
 
-    dataIstilah.forEach(item => {
+    filteredByCat.forEach(item => {
         if (!item.title_ms) return;
         const firstLetter = item.title_ms.trim().charAt(0).toUpperCase();
         if (!groups[firstLetter]) groups[firstLetter] = [];
@@ -1368,7 +1422,7 @@ function renderAlphabeticalDirectory() {
 
     const sortedLetters = Object.keys(groups).sort();
     if (sortedLetters.length === 0) {
-        groupsDiv.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 12px;">Tiada istilah untuk dipaparkan.</div>`;
+        groupsDiv.innerHTML = `<div style="color: var(--text-muted); text-align: center; padding: 16px;">Tiada istilah untuk dipaparkan bagi kategori ini.</div>`;
         return;
     }
 
@@ -1474,8 +1528,8 @@ function renderSearchCard() {
     if (!selectedSearchItem) {
         resultsList.innerHTML = `
             <div class="welcome-message" style="margin-bottom: 24px;">
-                <strong>Selamat Datang!</strong><br>
-                Sila taip nama terma di atas atau pilih daripada indeks abjad untuk memaparkan pilihan carian.
+                <strong>Selamat Datang ke Kamus Istilah!</strong><br>
+                Sila taip nama istilah di kotak carian atas atau klik mana-mana huruf pada indeks abjad di bawah.
             </div>
         `;
         return;
@@ -1494,20 +1548,20 @@ function renderSearchCard() {
                     if (parsed.mainTitle) {
                         formattedCharacteristics += `
                             <div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;">
-                                <span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${escapeHtml(parsed.mainTitle)}</span>
+                                <span style="font-size: calc(1.2rem * var(--font-scale)); font-weight: 800; color: var(--primary-color);">${escapeHtml(parsed.mainTitle)}</span>
                             </div>
                         `;
                     }
                     if (parsed.subTitle) {
                         formattedCharacteristics += `
-                            <div style="margin-top: 12px; margin-bottom: 8px; font-size: 1.05rem; font-weight: bold; color: var(--primary-color);">
+                            <div style="margin-top: 12px; margin-bottom: 8px; font-size: calc(1.05rem * var(--font-scale)); font-weight: 700; color: var(--primary-color);">
                                 ${escapeHtml(parsed.subTitle)}:
                             </div>
                         `;
                     }
                     if (parsed.content) {
                         formattedCharacteristics += `
-                            <div class="definition" style="margin-bottom: 16px; line-height: 1.6;">
+                            <div class="definition" style="margin-bottom: 16px; line-height: 1.65;">
                                 ${sanitizeHtml(parsed.content).replace(/\n/g, "<br>")}
                             </div>
                         `;
@@ -1520,7 +1574,7 @@ function renderSearchCard() {
                         const hasColumn4 = tHeaders[3]?.trim() !== "" || tRows.some(row => row[3]?.trim() !== "");
                         const th4Html = hasColumn4 ? `<th style="text-align: center;">${sanitizeHtml(tHeaders[3] || "")}</th>` : "";
                         const titleHtml = tTitle !== ""
-                            ? `<div style="margin-top: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 12px;"><span style="font-size: 1.15rem; font-weight: 700; color: var(--primary-color);">${escapeHtml(tTitle)}</span></div>`
+                            ? `<div style="margin-top: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 12px;"><span style="font-size: calc(1.15rem * var(--font-scale)); font-weight: 800; color: var(--primary-color);">${escapeHtml(tTitle)}</span></div>`
                             : "";
 
                         const rowsHtml = tRows.map(row => {
@@ -1553,10 +1607,10 @@ function renderSearchCard() {
                         `;
                     }
                 } else {
-                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
+                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.65;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
                 }
             } catch (e) {
-                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.6;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
+                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.65;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
             }
         });
     }
@@ -1569,7 +1623,7 @@ function renderSearchCard() {
         const hasColumn4Legacy = tHeadersLegacy[3]?.trim() !== "" || tRowsLegacy.some(row => row[3]?.trim() !== "");
         const th4LegacyHtml = hasColumn4Legacy ? `<th style="text-align: center;">${sanitizeHtml(tHeadersLegacy[3] || "")}</th>` : "";
         const legacyTitleHtml = tableTitle !== ""
-            ? `<div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;"><span style="font-size: 1.2rem; font-weight: 700; color: var(--primary-color);">${escapeHtml(tableTitle)}</span></div>`
+            ? `<div style="margin-top: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;"><span style="font-size: calc(1.2rem * var(--font-scale)); font-weight: 800; color: var(--primary-color);">${escapeHtml(tableTitle)}</span></div>`
             : "";
 
         const legacyRowsHtml = tRowsLegacy.map(row => {
@@ -1606,9 +1660,9 @@ function renderSearchCard() {
         ? sanitizeHtml(selectedSearchItem.definition).replace(/\n/g, "<br>")
         : "";
     let paparanKategori = "";
-    if (selectedSearchItem.disiplin_ilmu === "sorof") paparanKategori = "Sorof";
-    else if (selectedSearchItem.disiplin_ilmu === "nahu") paparanKategori = "Nahu";
-    else if (selectedSearchItem.disiplin_ilmu === "nombor") paparanKategori = "Penomboran";
+    if (selectedSearchItem.disiplin_ilmu === "sorof") paparanKategori = "Ilmu Sorof";
+    else if (selectedSearchItem.disiplin_ilmu === "nahu") paparanKategori = "Ilmu Nahu";
+    else if (selectedSearchItem.disiplin_ilmu === "nombor") paparanKategori = "Penomboran ('Adad)";
 
     card.innerHTML = `
         <div class="card-header">
@@ -1620,7 +1674,7 @@ function renderSearchCard() {
         </div>
         <div class="card-body">
             <div class="definition">${formattedDefinition}</div>
-            <div class="definition" style="line-height: 1.6;">${formattedCharacteristics}</div>
+            <div class="definition" style="line-height: 1.65;">${formattedCharacteristics}</div>
             ${legacyStandaloneTableHtml}
         </div>
     `;
@@ -1656,7 +1710,7 @@ function renderAdminList(filterText = "") {
             <td class="td-arabic">${escapeHtml(item.title_ar)}</td>
             <td><span class="badge">${escapeHtml(paparanKategori)}</span></td>
             <td>
-                <div class="actions-cell">
+                <div class="actions-cell" style="display:flex; gap:6px;">
                     <button class="btn btn-edit" type="button" data-action="edit-item" data-id="${escapeAttr(item.id)}">Ubah</button>
                     <button class="btn btn-danger" type="button" data-action="delete-item" data-id="${escapeAttr(item.id)}">Padam</button>
                 </div>
@@ -1825,7 +1879,7 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
 
     const sectionDiv = document.createElement("div");
     sectionDiv.className = "ciri-section-item";
-    sectionDiv.style = "background: #fff; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 8px; margin-bottom: 12px; position: relative;";
+    sectionDiv.style = "background: #fff; padding: 16px; border: 1px dashed #cbd5e0; border-radius: 10px; margin-bottom: 12px; position: relative;";
 
     const isTableVisible = tableDataVal ? "block" : "none";
     const btnToggleText = tableDataVal ? "✓ Buang Jadual" : "+ Tambah Jadual Contoh";
@@ -1860,9 +1914,9 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
             <textarea id="${uniqueId}" class="form-control ciri-content-input" rows="3" placeholder="Masukkan penerangan lengkap ciri ini...">${escapeHtml(contentVal)}</textarea>
         </div>
         <button type="button" class="btn ${btnToggleClass} btn-toggle-table" style="padding: 4px 10px; font-size: 0.8rem; margin-bottom: 4px;">${btnToggleText}</button>
-        <div class="ciri-table-builder" id="${tableContainerId}" style="display: ${isTableVisible}; background: #f7fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top: 8px;">
+        <div class="ciri-table-builder" id="${tableContainerId}" style="display: ${isTableVisible}; background: #f8fafc; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 8px;">
             <div class="form-group" style="margin-bottom: 8px;">
-                <label style="font-size: 0.85rem; color: var(--accent-color); font-weight: 600;">Tajuk Jadual (Pilihan)</label>
+                <label style="font-size: 0.85rem; color: var(--accent-color); font-weight: 700;">Tajuk Jadual (Pilihan)</label>
                 <input type="text" class="form-control ciri-table-title" placeholder="Contoh: Contoh Tasrif / Struktur" value="${escapeAttr(tTitle)}">
             </div>
             <div class="text-toolbar" style="margin-bottom: 8px; width: 100%;">
