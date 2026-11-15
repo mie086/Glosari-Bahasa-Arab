@@ -2,506 +2,720 @@
 <html lang="ms">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    <!-- Polisi Keselamatan Kandungan (CSP) membenarkan fon Google, CDN jsDelivr, dan Supabase -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; connect-src 'self' https://ejivaczazdimurhtlmsj.supabase.co; font-src 'self' data: https://fonts.gstatic.com; object-src 'none'; base-uri 'self'; form-action 'self'">
-    <title>Sistem Istilah & Koleksi Bahasa Arab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Misi Pemburuan Sotong 2027</title>
     
-    <!-- Fon Google untuk kejelasan tulisan Rumi (Plus Jakarta Sans) dan Arab (Amiri & Scheherazade New) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
-    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js" integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.4.16/dist/purify.min.js" integrity="sha384-a7SzOxErzJ3ZpQz0zJ32d67dSitNzPcbfybc/ykU9KJhMgZkwqfSxlhhdJRS+XGL" crossorigin="anonymous"></script>
 </head>
-<body>
+<body class="text-gray-800 pb-0">
+    <div id="mobile-wrapper">
 
-<!-- Bar Kebolehcapaian Atas (Mesra Semua Golongan) -->
-<div class="top-utility-bar">
-    <div class="utility-inner">
-        <div class="utility-brand-tag">
-            <span class="dot-live"></span> Portal Pembelajaran Bahasa Arab
-        </div>
-        <div class="font-scaler" aria-label="Kawalan Saiz Tulisan">
-            <span class="scaler-label">Saiz Teks:</span>
-            <button type="button" class="scale-btn" data-scale="0.92" title="Kecilkan Teks">A-</button>
-            <button type="button" class="scale-btn active" data-scale="1" title="Saiz Asal">A</button>
-            <button type="button" class="scale-btn" data-scale="1.12" title="Besarkan Teks">A+</button>
-            <button type="button" class="scale-btn" data-scale="1.25" title="Sangat Besar (Mesra Warga Emas)">A++</button>
-        </div>
-    </div>
-</div>
-
-<div class="container">
-    <!-- Hero Header -->
-    <header class="hero-header">
-        <div class="hero-badge">📚 Rujukan Interaktif Bahasa Arab</div>
-        <h1>Kamus Bahasa Arab</h1>
-        <p>Pelajari kaedah <strong>Tatabahasa Bahasa Arab</strong> dengan mudah dan tersusun.</p>
-    </header>
-
-    <!-- Navigasi Utama -->
-    <nav class="nav-tabs" aria-label="Menu Utama">
-        <button class="nav-btn active" id="tabCarian" data-target="sectionCarian">
-            <span class="nav-icon">📖</span> <span>Kamus Istilah</span>
-        </button>
-        <button class="nav-btn" id="tabAyat" data-target="sectionAyat">
-            <span class="nav-icon">✍️</span> <span>Koleksi Ayat</span>
-        </button>
-        <button class="nav-btn" id="tabHafalan" data-target="sectionHafalan">
-            <span class="nav-icon">🧠</span> <span>Mod Hafalan</span>
-        </button>
-        <button class="nav-btn" id="tabAdmin" data-target="sectionAdmin">
-            <span class="nav-icon">⚙️</span> <span>Panel Admin</span>
-        </button>
-    </nav>
-
-    <main>
-        <!-- =========================================================
-             SEKSYEN 1: KAMUS ISTILAH
-        ========================================================= -->
-        <section id="sectionCarian" class="view-section active">
-            <div class="search-panel">
-                <div class="search-wrapper">
-                    <div class="search-box">
-                        <span class="search-icon-prefix">🔍</span>
-                        <input type="search" id="searchInput" class="form-control search-input-lg" autocomplete="off" placeholder="Cari istilah Melayu, Arab atau kata kunci (cth: madhi, fail, marfu')...">
+        <!-- ======================================================= -->
+        <!-- SEKSYEN 1: NAVBAR ATAS                                  -->
+        <!-- ======================================================= -->
+        <nav class="bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-900 text-white p-4 shadow-lg sticky top-0 z-50 border-b border-blue-800/50 backdrop-blur-md bg-opacity-90">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div onclick="triggerSquidSwim()" class="relative float-animation cursor-pointer group">
+                        <span class="text-4xl filter drop-shadow-md relative z-10 block">🦑</span>
                     </div>
-                    <div class="suggestions-list" id="suggestionsList"></div>
-                </div>
-
-                <!-- Butang Penapis Kategori Pantas -->
-                <div class="quick-filter-bar">
-                    <span class="filter-label">Tapis Kategori:</span>
-                    <div class="filter-pills" id="directoryFilterPills">
-                        <button type="button" class="pill-btn active" data-cat="semua">Semua Istilah</button>
-                        <button type="button" class="pill-btn pill-sorof" data-cat="sorof">Ilmu Sorof</button>
-                        <button type="button" class="pill-btn pill-nahu" data-cat="nahu">Ilmu Nahu</button>
-                        <button type="button" class="pill-btn pill-nombor" data-cat="nombor">Penomboran ('Adad)</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="resultsList"></div> 
-            <div id="alphabeticalDirectory"></div>
-        </section>
-
-        <!-- =========================================================
-             SEKSYEN 2: KOLEKSI AYAT
-        ========================================================= -->
-        <section id="sectionAyat" class="view-section">
-            <div class="search-panel">
-                <div class="search-wrapper" style="margin-bottom: 14px;">
-                    <div class="search-box">
-                        <span class="search-icon-prefix">🔍</span>
-                        <input type="search" id="searchAyatInput" class="form-control search-input-lg" autocomplete="off" placeholder="Taip sekurang-kurangnya 3 huruf (cth: jalan, pergi, مَشَى, fi'il)...">
-                    </div>
-                    <div class="suggestions-list" id="suggestionsAyatList"></div>
-                </div>
-
-                <!-- Pemilih Pantas Ayat (Untuk Pengguna Baru Tanpa Perlu Menaip) -->
-                <div class="quick-select-ayat-bar">
-                    <label for="quickSelectAyat">Atau pilih terus daripada senarai ayat:</label>
-                    <select id="quickSelectAyat" class="form-control">
-                        <option value="">-- Pilih Contoh Ayat --</option>
-                    </select>
-                </div>
-            </div>
-
-            <div id="resultsAyatList"></div>
-        </section>
-
-        <!-- =========================================================
-             SEKSYEN 3: MOD HAFALAN (FLASHCARDS 3D)
-        ========================================================= -->
-        <section id="sectionHafalan" class="view-section">
-            <div class="card control-card" style="margin-bottom: 20px;">
-                <div class="hafalan-controls">
-                    <!-- 1. Sumber Hafalan (Kiri) -->
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
-                        <label for="hafalanSumber">1. Sumber Hafalan</label>
-                        <select id="hafalanSumber" class="form-control">
-                            <option value="istilah">📖 Kamus Istilah</option>
-                            <option value="ayat">✍️ Koleksi Ayat</option>
-                            <option value="quran">🕌 Hafalan Al-Quran</option>
-                        </select>
-                    </div>
-
-                    <!-- 2a. Muncul apabila Sumber = Kamus Istilah -->
-                    <div class="form-group" id="hafalanKategoriGroup" style="margin-bottom: 0; flex: 1; min-width: 160px;">
-                        <label for="hafalanKategori">2. Pilihan Kategori</label>
-                        <select id="hafalanKategori" class="form-control">
-                            <option value="semua">Semua Kategori</option>
-                            <option value="sorof">Ilmu Sorof (Morfologi)</option>
-                            <option value="nahu">Ilmu Nahu (Sintaksis)</option>
-                            <option value="nombor">Penomboran ('Adad)</option>
-                        </select>
-                    </div>
-
-                    <!-- 2b. Muncul di TENGAH apabila Sumber = Hafalan Al-Quran -->
-                    <div class="form-group" id="hafalanSurahGroup" style="margin-bottom: 0; flex: 1; min-width: 180px; display: none;">
-                        <label for="hafalanSurah">2. Pilihan Surah</label>
-                        <select id="hafalanSurah" class="form-control">
-                            <option value="semua">Semua Surah</option>
-                        </select>
-                    </div>
-
-                    <!-- 3. Muncul apabila Sumber = Koleksi Ayat ATAU Hafalan Al-Quran -->
-                    <div class="form-group" id="hafalanArahGroup" style="margin-bottom: 0; flex: 1; min-width: 160px; display: none;">
-                        <label for="hafalanArahAyat">Pilihan Hafalan</label>
-                        <select id="hafalanArahAyat" class="form-control">
-                            <option value="ar_ke_ms">Arab ➔ Melayu</option>
-                            <option value="ms_ke_ar">Melayu ➔ Arab</option>
-                        </select>
-                    </div>
-
-                    <!-- 4. Butang Tindakan (Kanan) -->
-                    <div class="hafalan-btn-group">
-                        <button type="button" class="btn btn-primary" id="btnRawakHafalan" title="Susun Secara Rawak">🔀 Rawak</button>
-                        <button type="button" class="btn btn-secondary" id="btnResetHafalan" title="Mula Semula">🔄 Reset</button>
-                    </div>
-                </div>
-
-                <!-- Bar Kemajuan Hafalan -->
-                <div class="hafalan-stats-bar">
-                    <div class="stats-meta-row">
-                        <span id="hafalanCounterText" class="counter-pill">Kad 0 / 0</span>
-                        <span class="mastered-pill">✔ Dikuasai: <span id="hafalanMasteredCount">0 / 0</span></span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" id="hafalanProgressFill" style="width: 0%;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kawasan Kad Imbasan -->
-            <div id="flashcardArea"></div>
-        </section>
-
-        <!-- =========================================================
-             SEKSYEN 4: PANEL ADMIN
-        ========================================================= -->
-        <section id="sectionAdmin" class="view-section">
-            <!-- Borang Log Masuk -->
-            <div id="adminAuthBox" class="auth-card">
-                <div class="auth-icon">🔐</div>
-                <h3>Log Masuk Pentadbir</h3>
-                <p class="auth-subtitle">Sila log masuk menggunakan akaun pentadbir Supabase untuk menguruskan kandungan.</p>
-
-                <div id="loginMessageAlert" style="display: none;"></div>
-                
-                <form id="loginForm">
-                    <div class="form-group">
-                        <label for="loginEmail">E-mel Admin</label>
-                        <input type="email" id="loginEmail" class="form-control" placeholder="admin@email.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="loginPassword">Kata Laluan</label>
-                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 8px; padding: 12px;">Log Masuk</button>
-                </form>
-            </div>
-
-            <!-- Papan Pemuka Admin -->
-            <div id="adminDashboardBox" style="display: none;">
-                <div class="admin-top-bar">
                     <div>
-                        <span class="badge" style="background:#dcfce7; color:#15803d; margin-bottom:4px;">● Sesi Pentadbir Aktif</span>
-                        <h3>Pengurusan Pangkalan Data Supabase</h3>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide uppercase">
+                            <span class="text-emerald-300">Misi Pemburuan Sotong</span> 2027
+                        </h1>
+                        <div class="text-xs text-blue-200 opacity-90 mt-0.5">
+                            <p class="flex items-center gap-1 hover:text-emerald-300 transition duration-200" title="Lihat Kalendar">
+                                <i class="fa-solid fa-calendar-days text-[10px]"></i>
+                                <span onclick="openCalendarModal()" class="cursor-pointer hover:scale-105 underline decoration-dotted underline-offset-4 inline-block">
+                                    6 Jun 2027
+                                </span>
+                            </p>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                        <button class="btn btn-primary" id="btnBukaBorang">+ Tambah Istilah</button>
-                        <button class="btn btn-success" id="btnBukaBorangAyat">+ Tambah Ayat</button>
-                        <button class="btn btn-teal" id="btnBukaBorangQuran">+ Tambah Ayat Al-Quran</button>
-                        <button id="btnLogKeluar" class="btn btn-secondary">Log Keluar</button>
+                </div>
+                <div>
+                    <div id="authButton" onclick="checkAuthAndToggle()" class="cursor-pointer text-blue-200 hover:text-white transition p-2 rounded-full hover:bg-white/10 relative">
+                        <i class="fa-solid fa-user-gear text-sm"></i>
+                        <span id="loginStatusDot" class="hidden absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-slate-900"></span>
                     </div>
                 </div>
+            </div>
+        </nav>
 
-                <!-- Borang 1: Tambah/Ubah Istilah -->
-                <div class="form-section" id="formSection">
-                    <h2 id="formTitle">Tambah Istilah Baru</h2>
-                    <form id="termForm">
-                        <input type="hidden" id="termId">
-                        
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="titleMs">Nama Istilah (Melayu)</label>
-                                <input type="text" id="titleMs" class="form-control" placeholder="Contoh: Fi'il Madhi" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="titleAr">Nama Istilah (Arab)</label>
-                                <input type="text" id="titleAr" class="form-control arabic-input" placeholder="فِعْل مَاضِي" required>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="disiplinIlmu">Kategori Ilmu</label>
-                                <select id="disiplinIlmu" class="form-control">
-                                    <option value="">-- Pilih Kategori --</option>
-                                    <option value="sorof">Ilmu Sorof (Morfologi)</option>
-                                    <option value="nahu">Ilmu Nahu (Sintaksis)</option>
-                                    <option value="nombor">Penomboran ('Adad)</option> 
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="keywords">Kata Kunci Carian (Asingkan dengan koma)</label>
-                                <input type="text" id="keywords" class="form-control" placeholder="cth: madhi, lepas, pelaku">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="definition">Definisi / Penerangan</label>
-                            <div class="text-toolbar">
-                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="b">B</button>
-                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="u"><u>U</u></button>
-                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="i"><i>I</i></button>
-                                <button type="button" class="toolbar-btn" data-format-target="definition" data-format="bullet">• Senarai</button>
-                                <div class="color-picker-wrapper"><input type="color" value="#000000" class="toolbar-color" data-format-target="definition" data-format="color"></div>
-                            </div>
-                            <textarea id="definition" class="form-control" rows="3" placeholder="Masukkan maksud istilah..." required></textarea>
-                        </div>
-
-                        <div class="form-group table-builder-box">
-                            <div id="ciriSectionsContainer"></div>
-                            <button type="button" class="btn btn-primary" id="btnTambahCiri" style="padding: 8px 14px; font-size: 0.85rem; margin-top: 8px;">+ Tambah Ciri-Ciri Utama / Jadual</button>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="btnBatal">Batal</button>
-                            <button type="submit" class="btn btn-success">Simpan Data Istilah</button>
-                        </div>
-                    </form>
+        <!-- ======================================================= -->
+        <!-- SEKSYEN 2: KANDUNGAN UTAMA (PENGENALAN & 5 TAB)         -->
+        <!-- ======================================================= -->
+        <div class="p-4 space-y-4">
+            
+            <!-- 2.1: Kad Pengenalan -->
+            <div id="introMissionSection" class="glass-panel rounded-2xl shadow-lg border-t-4 border-purple-500 relative overflow-hidden">
+                <div class="bg-gradient-to-r from-purple-900 to-blue-900 p-4 text-white relative">
+                    <div class="absolute right-0 top-0 opacity-10 transform translate-x-4 -translate-y-4"><i class="fa-solid fa-compass text-8xl"></i></div>
+                    <h2 class="font-bold text-lg mb-1 flex items-center gap-2 uppercase"><i class="fa-solid fa-book-open-reader"></i> Pengenalan</h2>
                 </div>
-
-                <!-- Borang 2: Tambah/Ubah Koleksi Ayat -->
-                <div class="form-section" id="formAyatSection">
-                    <h2 id="formAyatTitle">Tambah Koleksi Ayat Baru</h2>
-                    
-                    <div class="visual-action-bar">
-                        <span style="font-size: 0.9rem; font-weight: 700; color: var(--primary-color);">Tindakan Visual:</span>
-                        <button type="button" class="btn btn-primary" data-highlight-action="add" style="padding: 6px 14px; font-size: 0.85rem;">🔗 Pautkan Perkataan (Sorof/Nahu/'Adad)</button>
-                        <button type="button" class="btn btn-danger" data-highlight-action="remove" style="padding: 6px 14px; font-size: 0.85rem;">❌ Buang Pautan Sedia Ada</button>
+                
+                <div class="p-5 bg-white flex flex-col gap-4 text-sm leading-relaxed text-gray-700">
+                    <h3 class="font-bold text-gray-900 text-base border-b border-gray-100 pb-2 text-center">MISI PEMBURUAN SOTONG 2027</h3>
+                    <ul class="space-y-3 mt-1 text-sm text-gray-700">
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 text-center shrink-0 mt-0.5 text-red-500"><i class="fa-solid fa-location-dot"></i></span>
+                            <div class="flex-1 flex items-start">
+                                <strong class="shrink-0 mr-1">Destinasi:</strong>
+                                <span class="flex-1">
+                                    Jeti Kuala Besut, Terengganu
+                                    <span onclick="viewReceipt('Images/1.png, Images/2.jpg, Images/3.jpg')" class="inline-flex items-center gap-1 cursor-pointer text-blue-500 hover:text-blue-700 transition group ml-1">
+                                        <i class="fa-solid fa-image text-sm group-hover:scale-110 transition-transform"></i>
+                                        <span class="text-[10px] font-medium underline decoration-dotted">Lihat</span>
+                                    </span>
+                                </span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 text-center shrink-0 mt-0.5 text-blue-500"><i class="fa-solid fa-calendar-check"></i></span>
+                            <div class="flex-1 flex items-start">
+                                <strong class="shrink-0 mr-1">Tarikh:</strong>
+                                <span class="flex-1">
+                                    <span onclick="openCalendarModal()" class="cursor-pointer hover:text-emerald-600 underline decoration-dotted font-medium">5 &ndash; 7 Jun 2027</span> | 6 Jun &mdash; Hari Memburu Sotong
+                                </span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 text-center shrink-0 mt-0.5 text-indigo-500"><i class="fa-solid fa-anchor"></i></span>
+                            <div class="flex-1 flex items-start">
+                                <strong class="shrink-0 mr-1">Tekong:</strong>
+                                <span class="flex-1">
+                                    Pn. Syazwanie Aqilah
+                                    <span onclick="viewReceipt('Images/4.jpg, Images/5.png, Images/6.png, Images/7.png, Images/8.png, Images/9.png, Images/10.png')" class="inline-flex items-center gap-1 cursor-pointer text-blue-500 hover:text-blue-700 transition group ml-1">
+                                        <i class="fa-solid fa-image text-sm group-hover:scale-110 transition-transform"></i>
+                                        <span class="text-[10px] font-medium underline decoration-dotted">Lihat</span>
+                                    </span>
+                                </span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 text-center shrink-0 mt-0.5 text-emerald-500"><i class="fa-solid fa-bullseye"></i></span>
+                            <div class="flex-1 flex items-start">
+                                <strong class="shrink-0 mr-1">Target:</strong>
+                                <span class="flex-1">100 kg sotong</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-5 text-center shrink-0 mt-0.5 text-amber-500"><i class="fa-solid fa-house-chimney"></i></span>
+                            <div class="flex-1 flex items-start">
+                                <strong class="shrink-0 mr-1">Penginapan:</strong>
+                                <span class="flex-1">
+                                    2 malam di homestay
+                                    <span onclick="viewReceipt('Images/11.jpeg')" class="inline-flex items-center gap-1 cursor-pointer text-blue-500 hover:text-blue-700 transition group ml-1">
+                                        <i class="fa-solid fa-image text-sm group-hover:scale-110 transition-transform"></i>
+                                        <span class="text-[10px] font-medium underline decoration-dotted">Lihat</span>
+                                    </span>
+                                </span>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="space-y-3 mt-2 text-justify border-t border-gray-100 pt-3 text-xs text-gray-600">
+                        <p>Trip sebelum ini didatangi banyak cabaran, ditambah pula dengan ujian mabuk laut.</p>
+                        <p>In Shaa Allah, trip kali ini lebih baik dan dipermudahkan untuk mencapai <strong>target 100 kg sotong</strong>.</p>
+                        <p>Yang penting, bukan sekadar mengejar hasil tangkapan tetapi dapat <strong>luangkan masa bersama, mengeratkan silaturahim dan menikmati pengalaman mencandat sotong</strong>.</p>
                     </div>
-
-                    <form id="ayatForm">
-                        <input type="hidden" id="ayatId">
-                        
-                        <div class="form-group">
-                            <label>Ayat Penuh (Bahasa Arab)</label>
-                            <div id="ayatArEditor" class="form-control arabic-input content-editor" contenteditable="true" placeholder="Taipkan atau tampal ayat Bahasa Arab di sini..."></div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Terjemahan Penuh (Bahasa Melayu)</label>
-                            <div id="terjemahanMsEditor" class="form-control content-editor" contenteditable="true" placeholder="Taipkan terjemahan Bahasa Melayu di sini..."></div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Senarai Kata Kunci Carian (Dijana Secara Automatik)</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                                <div style="flex: 1; min-width: 140px;">
-                                    <input type="text" id="kataKunciSorofAyat" class="form-control" placeholder="Morfologi (Sorof)..." readonly style="background-color: #f0fdf4; border-color: #bbf7d0; color: #047857; font-size: 0.85rem;">
-                                </div>
-                                <div style="flex: 1; min-width: 140px;">
-                                    <input type="text" id="kataKunciNahuAyat" class="form-control" placeholder="Sintaksis (Nahu)..." readonly style="background-color: #f0f9ff; border-color: #bae6fd; color: #0369a1; font-size: 0.85rem;">
-                                </div>
-                                <div style="flex: 1; min-width: 140px;">
-                                    <input type="text" id="kataKunciNomborAyat" class="form-control" placeholder="Penomboran ('Adad)..." readonly style="background-color: #faf5ff; border-color: #e9d5ff; color: #7e22ce; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <input type="hidden" id="kataKunciAyat">
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="btnBatalAyat">Batal</button>
-                            <button type="submit" class="btn btn-success">Simpan Data Ayat</button>
-                        </div>
-                    </form>
                 </div>
+            </div>
 
-                <!-- Borang 3: Tambah/Ubah Hafalan Al-Quran -->
-                <div class="form-section" id="formQuranSection">
-                    <h2 id="formQuranTitle">Tambah Ayat Al-Quran Baru</h2>
-                    <form id="quranForm">
-                        <input type="hidden" id="quranId">
-
-                        <div class="surah-grid-inputs">
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label for="quranNoSurah">No. Surah</label>
-                                <input type="number" id="quranNoSurah" class="form-control" min="1" max="114" placeholder="1 - 114" required>
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label for="quranSurah">Nama Surah</label>
-                                <input type="text" id="quranSurah" list="senaraiSurahAdmin" class="form-control" placeholder="Contoh: Al-Baqarah / Al-Ghaasyiyah (Hari Pembalasan)" required>
-                                <datalist id="senaraiSurahAdmin"></datalist>
-                            </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label for="quranNoAyat">No. Ayat</label>
-                                <input type="text" id="quranNoAyat" class="form-control" placeholder="cth: 15 / 1-5" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="quranAyatAr">Potongan / Ayat Al-Quran (Bahasa Arab)</label>
-                            <textarea id="quranAyatAr" class="form-control arabic-input" rows="3" placeholder="Masukkan teks ayat Al-Quran..." required></textarea>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="quranMaknaMudah" style="color: #047857;">1. Makna Mudah Difahami (Bahasa Melayu)</label>
-                                <div class="text-toolbar">
-                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaMudah" data-format="b">B</button>
-                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaMudah" data-format="u"><u>U</u></button>
-                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaMudah" data-format="i"><i>I</i></button>
-                                    <div class="color-picker-wrapper"><input type="color" value="#000000" class="toolbar-color" data-format-target="quranMaknaMudah" data-format="color"></div>
-                                </div>
-                                <textarea id="quranMaknaMudah" class="form-control" rows="4" placeholder="Masukkan terjemahan/maksud ayat yang mudah difahami secara keseluruhan..." required></textarea>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="quranMaknaLiteral" style="color: #0369a1;">2. Makna Secara Literal / Harfiah (Bahasa Melayu)</label>
-                                <div class="text-toolbar">
-                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaLiteral" data-format="b">B</button>
-                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaLiteral" data-format="u"><u>U</u></button>
-                                    <button type="button" class="toolbar-btn" data-format-target="quranMaknaLiteral" data-format="i"><i>I</i></button>
-                                    <div class="color-picker-wrapper"><input type="color" value="#000000" class="toolbar-color" data-format-target="quranMaknaLiteral" data-format="color"></div>
-                                </div>
-                                <textarea id="quranMaknaLiteral" class="form-control" rows="4" placeholder="Masukkan makna perkataan demi perkataan atau huraian literal..." required></textarea>
-                            </div>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-secondary" id="btnBatalQuran">Batal</button>
-                            <button type="submit" class="btn btn-success">Simpan Ayat Al-Quran</button>
-                        </div>
-                    </form>
+            <!-- 2.2: Bar Tab Gabungan (Sticky) -->
+            <div id="mainTabsAnchor" class="sticky top-[72px] z-40 pt-1 pb-1">
+                <div class="bg-white p-1.5 rounded-2xl shadow-md border border-gray-200/80 grid grid-cols-5 gap-1">
+                    <button type="button" id="tabBtn-tabung" onclick="switchMainTab('tabung', false)" class="main-tab-btn active-tab flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-200">
+                        <i class="fa-solid fa-users text-xs"></i><span>Tabung</span>
+                    </button>
+                    <button type="button" id="tabBtn-belanja" onclick="switchMainTab('belanja', false)" class="main-tab-btn inactive-tab flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-200">
+                        <i class="fa-solid fa-receipt text-xs"></i><span>Belanja</span>
+                    </button>
+                    <button type="button" id="tabBtn-tentatif" onclick="switchMainTab('tentatif', false)" class="main-tab-btn inactive-tab flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-200">
+                        <i class="fa-solid fa-route text-xs"></i><span>Tentatif</span>
+                    </button>
+                    <button type="button" id="tabBtn-checklist" onclick="switchMainTab('checklist', false)" class="main-tab-btn inactive-tab flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-200">
+                        <i class="fa-solid fa-list-check text-xs"></i><span>Checklist</span>
+                    </button>
+                    <button type="button" id="tabBtn-bantuan" onclick="switchMainTab('bantuan', false)" class="main-tab-btn inactive-tab flex flex-col sm:flex-row items-center justify-center gap-1 py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-200">
+                        <i class="fa-solid fa-circle-question text-xs"></i><span>Bantuan</span>
+                    </button>
                 </div>
+            </div>
 
-                <!-- Penukar Paparan Jadual Panel Admin -->
-                <div class="admin-table-switcher">
-                    <button class="btn btn-primary" id="btnTabJadualIstilah" style="flex: 1;">📖 Jadual Istilah</button>
-                    <button class="btn btn-secondary" id="btnTabJadualAyat" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">✍️ Jadual Ayat</button>
-                    <button class="btn btn-secondary" id="btnTabJadualQuran" style="flex: 1; background-color: var(--border-color); color: var(--text-color);">🕌 Jadual Al-Quran</button>
-                </div>
-
-                <!-- Pembungkus Jadual Istilah -->
-                <div id="jadualIstilahWrapper">
-                    <div class="table-header-toolbar">
-                        <h3>Senarai Istilah Nahu / Sorof / 'Adad</h3>
-                        <input type="text" id="adminSearchInput" class="form-control" style="max-width: 340px;" placeholder="🔍 Cari nama istilah, kategori...">
+            <!-- 2.3: Bekas Kandungan 5 Tab -->
+            <div id="tabContentsWrapper">
+                
+                <!-- TAB 1: Tabung Ahli -->
+                <div id="memberSection" class="tab-pane glass-panel rounded-2xl shadow-sm overflow-hidden h-fit animate-fadeIn">
+                    <div class="bg-gradient-to-r from-blue-900 to-slate-900 p-4 relative text-white border-b border-white/20 overflow-hidden">
+                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-20 text-blue-200"><i class="fa-solid fa-users text-5xl"></i></div>
+                        <div class="relative z-10">
+                            <h2 class="font-bold text-lg mb-1 flex items-center gap-2 uppercase"><i class="fa-solid fa-hand-holding-dollar"></i> Tabung Pemburu</h2>
+                            <p class="text-blue-200 text-[10px] capitalize tracking-wider">Senarai Semak Pembayaran</p>
+                        </div>
                     </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Istilah (MS)</th>
-                                    <th style="text-align: right;">Istilah (AR)</th>
-                                    <th>Kategori</th>
-                                    <th>Tindakan</th>
+                    <div class="bg-white pt-4 pb-2 px-4 border-b border-gray-100">
+                        <div class="flex justify-between items-end mb-3">
+                            <div>
+                                <p class="text-[10px] text-gray-500 uppercase font-bold">Terkumpul :</p>
+                                <h3 class="text-2xl font-bold text-emerald-600 leading-none mt-1" id="tableSummaryCollected">RM 0</h3>
+                            </div>
+                            <div class="pb-0.5">
+                                <button onclick="openBudgetModal()" class="text-[10px] text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-100 px-3 py-1.5 rounded-full font-bold inline-flex items-center gap-1.5 transition-transform hover:scale-105 shadow-sm">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i> Bajet Trip
+                                </button>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-gray-400 text-right">Target :</p>
+                                <div class="flex items-center justify-end gap-1 mt-1">
+                                    <p id="totalTargetDisplay" class="text-sm font-bold text-gray-700 leading-none">RM 4,750</p>
+                                    <button id="btnEditTarget" onclick="editTotalTarget()" class="hidden text-gray-400 hover:text-blue-500 transition" title="Kemaskini Target">
+                                        <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="w-full">
+                            <div class="w-full bg-gray-100 rounded-full h-2.5 mb-1">
+                                <div id="tableSummaryProgress" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                            </div>
+                            <div class="text-center"><span id="summaryPercentage" class="text-xs font-bold text-gray-400">0%</span></div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-gray-50 shadow-sm z-10">
+                                <tr class="text-gray-500 text-[10px] uppercase">
+                                    <th class="p-3">Nama</th><th class="p-3 text-center">Prog.</th><th class="p-3 text-center">Bayar</th><th class="p-3 text-center">Butiran</th>
                                 </tr>
                             </thead>
-                            <tbody id="adminTableBody"></tbody>
+                            <tbody id="memberTableBody" class="divide-y divide-gray-100 bg-white text-xs"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- Pembungkus Jadual Ayat -->
-                <div id="jadualAyatWrapper" style="display: none;">
-                    <div class="table-header-toolbar">
-                        <h3>Senarai Koleksi Ayat</h3>
-                        <input type="text" id="adminSearchAyatInput" class="form-control" style="max-width: 340px;" placeholder="🔍 Cari ayat, terjemahan, kata kunci...">
+                <!-- TAB 2: Perbelanjaan -->
+                <div id="expensesSection" class="tab-pane hidden glass-panel rounded-2xl shadow-sm overflow-hidden h-fit animate-fadeIn">
+                    <div class="bg-[#78350f] p-4 text-white relative">
+                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-20 text-blue-200"><i class="fa-solid fa-chart-line text-6xl"></i></div>
+                        <div class="relative z-10">
+                            <h2 class="font-bold text-lg mb-1 flex items-center gap-2 uppercase"><i class="fa-solid fa-chart-pie"></i> Rekod Perbelanjaan</h2>
+                            <p class="text-yellow-200 text-[10px] capitalize tracking-wider">Laporan Terperinci Perbelanjaan</p>
+                        </div>
                     </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 40%; text-align: right;">Ayat (AR)</th>
-                                    <th style="width: 40%;">Terjemahan (MS)</th>
-                                    <th style="width: 20%;">Tindakan</th>
-                                </tr>
+                    <div class="p-5 bg-white flex justify-between items-center text-center border-b border-gray-100">
+                        <div class="flex-1"><div class="text-[10px] text-gray-400 font-bold uppercase mb-1">Terkumpul</div><div class="font-bold text-emerald-500 text-sm" id="summaryCollected">RM 0</div></div>
+                        <div class="w-px h-8 bg-gray-200"></div>
+                        <div class="flex-1"><div class="text-[10px] text-gray-400 font-bold uppercase mb-1">Belanja</div><div class="font-bold text-red-500 text-sm" id="summaryExpenses">RM 0</div></div>
+                        <div class="w-px h-8 bg-gray-200"></div>
+                        <div class="flex-1"><div class="text-[10px] text-gray-400 font-bold uppercase mb-1">Baki Bersih</div><div class="font-bold text-blue-600 text-sm" id="summaryNetBalance">RM 0</div></div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-orange-50 text-orange-800 text-[10px] uppercase">
+                                <tr><th class="p-3 w-24">Tarikh</th><th class="p-3">Kategori & Perincian</th><th class="p-3 w-24 text-right">Jumlah</th></tr>
                             </thead>
-                            <tbody id="adminTableAyatBody"></tbody>
+                            <tbody id="expensesTableBody" class="divide-y divide-gray-100 bg-white text-xs"></tbody>
                         </table>
+                        <div id="noExpensesMsg" class="p-6 text-center text-gray-400 hidden text-sm">Tiada rekod lagi.</div>
                     </div>
                 </div>
 
-                <!-- Pembungkus Jadual Al-Quran -->
-                <div id="jadualQuranWrapper" style="display: none;">
-                    <div class="table-header-toolbar">
-                        <h3>Senarai Hafalan Al-Quran</h3>
-                        <input type="text" id="adminSearchQuranInput" class="form-control" style="max-width: 340px;" placeholder="🔍 Cari surah, ayat, makna mudah/literal...">
+                <!-- TAB 3: Tentatif -->
+                <div id="tentativeSection" class="tab-pane hidden glass-panel rounded-2xl shadow-sm overflow-hidden h-fit animate-fadeIn">
+                    <div class="bg-indigo-900 p-4 text-white flex justify-between items-center relative overflow-hidden">
+                        <div class="relative z-10">
+                            <h3 class="font-bold text-lg mb-1 flex items-center gap-2 uppercase"><i class="fa-solid fa-map-location-dot"></i> Tentatif Program</h3>
+                            <div class="flex items-center gap-2">
+                                <p id="tentativeWarningText" class="text-indigo-300 text-[10px] capitalize tracking-wider transition-all duration-300">
+                                    <i class="fa-solid fa-circle-exclamation text-yellow-400 animate-pulse"></i> Tentatif Akan Dikemaskini
+                                </p>
+                                <button id="btnToggleWarning" onclick="toggleTentativeWarning()" class="hidden text-indigo-300 hover:text-white bg-indigo-800/80 rounded px-1.5 py-0.5 text-[10px] transition">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-indigo-200 bg-indigo-800 px-2 py-1 rounded border border-indigo-700">3H 2M</span>
                     </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width: 38%; text-align: right;">Surah & Ayat Al-Quran (AR)</th>
-                                    <th style="width: 42%;">Makna Mudah & Literal (MS)</th>
-                                    <th style="width: 20%;">Tindakan</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminTableQuranBody"></tbody>
-                        </table>
+                    <div class="p-4 bg-white relative">
+                        <div class="absolute left-8 top-6 bottom-6 w-0.5 bg-gray-100"></div>
+                        <div id="tentativeContainer" class="space-y-6 relative">
+                            <div class="text-center text-xs text-gray-400 py-4"><i class="fa-solid fa-spinner fa-spin"></i> Memuatkan tentatif...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: Checklist -->
+                <div id="checklistSection" class="tab-pane hidden glass-panel rounded-2xl shadow-sm overflow-hidden border border-gray-100 animate-fadeIn">
+                    <div class="bg-slate-800 p-4 text-white flex items-center justify-between relative overflow-hidden">
+                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-20 text-blue-200 pointer-events-none"><i class="fa-solid fa-suitcase-rolling text-6xl"></i></div>
+                        <div class="relative z-10">
+                            <h2 class="font-bold text-lg mb-1 flex items-center gap-2 uppercase"><i class="fa-solid fa-clipboard-check"></i> Checklist Trip</h2>
+                            <div class="flex items-center gap-2">
+                                <p id="checklistWarningText" class="text-emerald-200 text-[10px] capitalize tracking-wider transition-all duration-300">
+                                    <i class="fa-solid fa-circle-exclamation text-yellow-400 animate-pulse"></i> Checklist Akan Dikemaskini
+                                </p>
+                                <button id="btnToggleChecklistWarning" onclick="toggleChecklistWarning()" class="hidden text-emerald-200 hover:text-white bg-slate-700/80 rounded px-1.5 py-0.5 text-[10px] transition">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="checklistContainer" class="p-4 bg-white space-y-3">
+                        <div class="text-center text-xs text-gray-400 py-4"><i class="fa-solid fa-spinner fa-spin"></i> Memuatkan checklist...</div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: Pusat Bantuan -->
+                <div id="helpSection" class="tab-pane hidden glass-panel rounded-2xl shadow-sm overflow-hidden border-l-4 border-yellow-400 bg-white animate-fadeIn">
+                    <div class="p-4 bg-yellow-50 border-b border-yellow-100 flex justify-between items-center">
+                        <div>
+                            <h2 class="font-bold text-lg flex items-center gap-2 uppercase text-slate-800">
+                                <i class="fa-solid fa-circle-question text-yellow-500 text-lg"></i> Pusat Bantuan
+                            </h2>
+                            <p class="text-yellow-700 text-[10px] tracking-wider">Saluran Pertanyaan & Rujukan Ahli</p>
+                        </div>
+                        <span class="text-[10px] text-yellow-800 font-bold bg-yellow-200/70 px-2.5 py-1 rounded-full">Admin</span>
+                    </div>
+                    <div class="p-5">
+                        <p class="text-xs text-gray-500 mb-4 text-center">Ada pertanyaan mengenai pembayaran, kelengkapan atau tentatif trip? Sila hubungi wakil Admin:</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="toggleContactModal()" class="group py-4 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 border border-blue-200 rounded-xl transition-all active:scale-95 flex flex-col items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-user-secret text-xl group-hover:scale-110 transition-transform"></i>
+                                <span class="text-xs font-bold">John Cupang</span>
+                            </button>
+                            <button onclick="toggleContactModal()" class="group py-4 bg-purple-50 hover:bg-purple-100 text-purple-600 hover:text-purple-700 border border-purple-200 rounded-xl transition-all active:scale-95 flex flex-col items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-user-astronaut text-xl group-hover:scale-110 transition-transform"></i>
+                                <span class="text-xs font-bold">Remy Ebek</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
             </div>
-        </section>
-    </main>
-</div>
 
-<button type="button" class="floating-search-btn" id="btnFloatingSearch" title="Langkau ke Kotak Carian">🔍</button>
-
-<!-- MODAL PAUTAN PERKATAAN ADMIN -->
-<div id="customPromptModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card">
-        <h4 class="modal-title">🔗 Pautkan Perkataan (Arab & Terjemahan)</h4>
-        
-        <div class="form-group" style="margin-bottom: 12px;">
-            <label style="font-size: 0.85rem;">1. Perkataan Arab</label>
-            <input type="text" id="promptArab" class="form-control arabic-input" autocomplete="off" placeholder="Salin/taip perkataan Arab...">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-            <label style="font-size: 0.85rem;">2. Perkataan Terjemahan (Pilihan)</label>
-            <input type="text" id="promptMelayu" class="form-control" autocomplete="off" placeholder="Salin/taip terjemahan Melayu (jika ada)...">
-            <span style="font-size: 0.72rem; color: var(--text-muted);">Biarkan kosong jika tiada terjemahan langsung untuk perkataan ini.</span>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-            <label style="font-size: 0.85rem; color: #047857;">3a. Kata Kunci Sorof (Wazan/Bentuk)</label>
-            <input type="text" id="promptKataKunciSorof" list="senaraiSorof" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #a7f3d0;">
-            <datalist id="senaraiSorof"></datalist>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 12px;">
-            <label style="font-size: 0.85rem; color: #0369a1;">3b. Kata Kunci Nahu (I'rab/Struktur)</label>
-            <input type="text" id="promptKataKunciNahu" list="senaraiNahu" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #bae6fd;">
-            <datalist id="senaraiNahu"></datalist>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 16px;">
-            <label style="font-size: 0.85rem; color: #7e22ce;">3c. Kata Kunci Penomboran ('Adad)</label>
-            <input type="text" id="promptKataKunciNombor" list="senaraiNombor" class="form-control" autocomplete="off" placeholder="Pilih dari senarai atau taip..." style="border-color: #e9d5ff;">
-            <datalist id="senaraiNombor"></datalist>
-        </div>
-        
-        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: -8px; margin-bottom: 16px; font-style: italic;">
-            *Isi sekurang-kurangnya salah satu kotak kata kunci di atas.
-        </div>
-
-        <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 8px;">
-            <button type="button" class="btn btn-secondary" id="btnCustomPromptCancel">Batal</button>
-            <button type="button" class="btn btn-primary" id="btnCustomPromptOk">OK Pautkan Semua</button>
+            <!-- 2.4: Nota Kaki & Ruang Penimbal Skrol -->
+            <div class="text-[10px] bg-purple-50/80 backdrop-blur-sm p-3 rounded-xl border border-purple-200/60 text-purple-800 text-center shadow-sm">
+                <i class="fa-solid fa-robot text-purple-500 mr-1"></i> <strong>Trivia Tech:</strong> Halaman ini dihasilkan dengan model <span class="font-bold text-purple-700">Gemini</span> dan <span class="font-bold text-purple-700">ChatGPT</span> bagi memastikan semua urusan tiada ralat.
+            </div>
+            <div id="bottomSpacer" class="h-14 w-full"></div>
         </div>
     </div>
-</div>
 
-<script src="script.js?v=20261102-ui"></script>
+    <!-- ======================================================= -->
+    <!-- SEKSYEN 3: NAVIGASI BAWAH, TOAST & BUTANG TERAPUNG ADMIN -->
+    <!-- ======================================================= -->
+    <div class="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-[440px] z-[90]">
+        <div class="bg-slate-900/90 backdrop-blur-md border-t border-white/10 px-4 py-3 rounded-t-2xl shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+            <div class="flex justify-between items-center text-[10px] font-medium text-gray-400">
+                <button type="button" id="bottomNav-tentatif" onclick="switchMainTab('tentatif', true)" class="flex flex-col items-center gap-1 hover:text-emerald-400 transition group w-1/5 cursor-pointer">
+                    <i class="fa-solid fa-map-location-dot text-lg mb-0.5 group-hover:-translate-y-1 transition-transform"></i><span>Tentatif</span>
+                </button>
+                <button type="button" onclick="openCalendarModal()" class="flex flex-col items-center gap-1 hover:text-blue-400 transition group w-1/5 cursor-pointer">
+                    <i class="fa-solid fa-calendar-days text-lg mb-0.5 group-hover:-translate-y-1 transition-transform"></i><span>Kalendar</span>
+                </button>
+                <div class="relative w-1/5 flex justify-center">
+                    <button type="button" onclick="scrollToTopHome()" class="absolute -top-8 bg-gradient-to-tr from-emerald-500 to-blue-500 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-slate-900 hover:scale-110 transition-transform cursor-pointer">
+                        <i class="fa-solid fa-house text-xl"></i>
+                    </button>
+                    <span class="mt-7 font-semibold text-white">Utama</span>
+                </div>
+                <button type="button" id="bottomNav-tabung" onclick="switchMainTab('tabung', true)" class="text-yellow-400 flex flex-col items-center gap-1 hover:text-yellow-400 transition group w-1/5 cursor-pointer">
+                    <i class="fa-solid fa-users text-lg mb-0.5 group-hover:-translate-y-1 transition-transform"></i><span>Tabung</span>
+                </button>
+                <button type="button" id="bottomNav-belanja" onclick="switchMainTab('belanja', true)" class="flex flex-col items-center gap-1 hover:text-red-400 transition group w-1/5 cursor-pointer">
+                    <i class="fa-solid fa-chart-pie text-lg mb-0.5 group-hover:-translate-y-1 transition-transform"></i><span>Rekod</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Peringatan -->
+    <div id="paymentToast" class="fixed top-5 left-5 z-[110] transform -translate-x-full opacity-0 transition-all duration-700 ease-in-out pointer-events-none">
+        <div class="glass-panel bg-slate-900/90 backdrop-blur-md border border-white/20 text-white p-4 rounded-xl shadow-2xl flex items-start gap-3 w-[280px] relative">
+            <div class="text-yellow-400 shrink-0 animate-pulse"><i class="fa-solid fa-circle-exclamation"></i></div>
+            <div>
+                <h4 class="font-bold text-sm text-yellow-100">Peringatan Mesra :</h4>
+                <p class="text-[10px] text-gray-300 leading-tight mt-1">Sila jelaskan bayaran tabung sebelum tarikh trip. Terima kasih!</p>
+            </div>
+            <button onclick="closeToast()" class="absolute top-1/2 -translate-y-1/2 right-3 text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+        </div>
+    </div>
+
+    <!-- Admin Floating Action Button (FAB) -->
+    <div id="adminFab" class="fixed bottom-24 right-4 z-[100] hidden flex-col gap-3 items-end">
+        <button onclick="toggleTentativeModal(true)" class="bg-indigo-500 hover:bg-indigo-600 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition hover:scale-110" title="Urus Tentatif"><i class="fa-solid fa-list-check"></i></button>
+        <button onclick="toggleChecklistModal(true)" class="bg-teal-500 hover:bg-teal-600 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition hover:scale-110" title="Urus Checklist"><i class="fa-solid fa-clipboard-check"></i></button>
+        <button onclick="toggleMemberConfigModal(true)" class="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition hover:scale-110" title="Tambah Ahli"><i class="fa-solid fa-user-plus"></i></button>
+        <button onclick="toggleExpenseModal(true)" class="bg-red-500 hover:bg-red-600 text-white w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition hover:scale-110" title="Tambah Rekod"><i class="fa-solid fa-cart-plus"></i></button>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- SEKSYEN 4: BEKAS SEMUA MODAL (LIPAT DI SINI DALAM EDITOR)-->
+    <!-- ======================================================= -->
+    <div id="allModalsContainer">
+
+        <!-- 4.1: MODAL MAKLUMAN SISTEM UNIVERSAL (Ganti 7 Modal Lama!) -->
+        <div id="systemAlertModal" onclick="closeSystemAlert()" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[220] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[85%] max-w-sm shadow-2xl transform scale-95 transition-transform duration-300 text-center relative">
+                <div id="sysAlertIconWrap" class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
+                    <i id="sysAlertIcon" class="fa-solid fa-check text-2xl"></i>
+                </div>
+                <h3 id="sysAlertTitle" class="font-bold text-xl text-slate-800 mb-2">Tajuk</h3>
+                <p id="sysAlertDesc" class="text-sm text-slate-500 mb-6">Mesej makluman sistem.</p>
+                <button id="sysAlertBtn" onclick="closeSystemAlert()" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition shadow-lg">
+                    Tutup
+                </button>
+            </div>
+        </div>
+
+        <!-- 4.2: Modal Pengesahan Padam (Confirmation) -->
+        <div id="confirmationModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[210] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[85%] max-w-sm shadow-2xl transform scale-95 transition-transform duration-300 text-center relative">
+                <div class="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500 animate-pulse">
+                    <i class="fa-solid fa-triangle-exclamation text-3xl"></i>
+                </div>
+                <h3 class="font-bold text-xl text-slate-800 mb-2">Anda Pasti?</h3>
+                <p id="confirmMessage" class="text-sm text-slate-500 mb-6">Tindakan ini tidak boleh dikembalikan.</p>
+                <div class="flex gap-3">
+                    <button onclick="closeConfirmationModal()" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-bold transition">Batal</button>
+                    <button onclick="executeConfirmAction()" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition shadow-lg">Ya, Padam</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4.3: Modal Kalendar -->
+        <div id="calendarModal" onclick="closeCalendarModal()" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[200] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div id="calendarModalContent" onclick="event.stopPropagation()" class="bg-white rounded-3xl p-6 w-[90%] max-w-sm shadow-2xl transform scale-95 transition-transform duration-300 relative">
+                <button onclick="closeCalendarModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-50 text-blue-500 rounded-full mb-3"><i class="fa-regular fa-calendar-days text-xl"></i></div>
+                    <h3 class="font-bold text-lg text-slate-800">Kiraan Detik</h3>
+                    <p id="modalCountdown" class="text-blue-600 font-bold text-sm mt-1">Memuatkan...</p>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="changeMonth(-1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <h4 id="calTitle" class="font-bold text-gray-700 text-sm"></h4>
+                    <button onclick="changeMonth(1)" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-2">
+                    <div>Aha</div><div>Isn</div><div>Sel</div><div>Rab</div><div>Kha</div><div>Jum</div><div>Sab</div>
+                </div>
+                <div id="calGrid" class="grid grid-cols-7 gap-y-2 text-sm"></div>
+                <div class="mt-6 pt-4 border-t border-gray-100 flex justify-center gap-6 text-xs text-gray-500">
+                    <button type="button" onclick="jumpToToday()" class="flex items-center gap-1.5 hover:text-blue-600 transition transform hover:scale-105"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Hari Ini</button>
+                    <button type="button" onclick="jumpToTripDate()" class="flex items-center gap-1.5 hover:text-emerald-600 transition transform hover:scale-105"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Memburu Sotong!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4.4: Modal Hubungi Admin & Butiran Bayaran Ahli -->
+        <div id="adminContactModal" onclick="toggleContactModal()" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[100]">
+            <div class="bg-white rounded-xl p-6 w-[85%] max-w-sm text-center m-4" onclick="event.stopPropagation()">
+                <h3 class="font-bold text-lg mb-2">Hubungi Admin</h3>
+                <p class="text-sm text-gray-600 mb-4">Sila rujuk grup WhatsApp untuk sebarang pertanyaan.</p>
+                <button onclick="toggleContactModal()" class="bg-slate-800 text-white px-6 py-2 rounded-lg text-sm">Tutup</button>
+            </div>
+        </div>
+
+        <div id="detailsModal" onclick="closeDetailsModal()" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 backdrop-blur-sm">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl transform scale-95 transition-transform" id="detailsModalContent">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <div><h3 class="font-bold text-lg text-gray-800" id="detailMemberName">Nama Ahli</h3><p class="text-xs text-gray-500">Sejarah pembayaran:</p></div>
+                    <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3 max-h-60 overflow-y-auto mb-4 border border-gray-100">
+                    <table class="w-full text-left text-xs">
+                        <thead><tr class="text-gray-500 border-b border-gray-200"><th class="pb-2">Tarikh</th><th class="pb-2 text-right">Jumlah</th></tr></thead>
+                        <tbody id="detailsTableBody" class="text-gray-700"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <span class="text-xs font-bold text-blue-800">Jumlah Keseluruhan:</span>
+                    <span id="detailTotal" class="text-sm font-bold text-blue-600">RM 0</span>
+                </div>
+                <div class="flex gap-2 items-start text-left bg-yellow-50 p-2 rounded-lg border border-yellow-100 w-full mt-3">
+                    <i class="fa-solid fa-circle-exclamation text-yellow-500 text-xs mt-0.5"></i>
+                    <p class="text-[10px] text-yellow-800 leading-tight">Sila <strong>MAKLUMKAN!</strong> kepada Admin jika terdapat sebarang kesilapan.</p>
+                </div>
+                <div class="flex justify-center mt-4"><button onclick="closeDetailsModal()" class="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium text-xs">Tutup</button></div>
+            </div>
+        </div>
+
+        <!-- 4.5: Modal Log Masuk & Log Keluar -->
+        <div id="loginModal" onclick="closeLoginModal()" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[120] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl transform scale-95 transition-transform duration-300 relative" id="loginModalContent">
+                <div class="text-center mb-6">
+                    <div class="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-blue-600"><i class="fa-solid fa-lock"></i></div>
+                    <h3 class="font-bold text-xl text-slate-800">Pentadbir Sistem</h3>
+                    <p class="text-xs text-slate-500">Log Masuk Untuk Pentadbir Sistem:</p>
+                </div>
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Email</label><input type="email" id="adminEmail" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 transition" placeholder="abc@contoh.com" required></div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Kata Laluan</label><input type="password" id="adminPassword" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 transition" placeholder="••••••••" required></div>
+                    <div id="loginErrorMsg" class="hidden text-xs text-red-500 text-center bg-red-50 p-2 rounded-lg border border-red-100">Email atau password salah.</div>
+                    <button type="submit" id="btnLoginSubmit" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-sm font-bold transition shadow-lg flex justify-center items-center gap-2"><span>Log Masuk</span><i class="fa-solid fa-arrow-right"></i></button>
+                </form>
+                <button onclick="closeLoginModal()" class="absolute top-4 right-4 text-gray-300 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+        <div id="logoutModal" onclick="closeLogoutModal()" class="fixed inset-0 bg-black/60 hidden flex items-center justify-center z-[120]">
+            <div class="bg-white rounded-xl p-6 w-[85%] max-w-sm text-center m-4 shadow-2xl" onclick="event.stopPropagation()">
+                <div class="bg-red-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 text-red-500"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+                <h3 class="font-bold text-lg mb-2">Log Keluar?</h3>
+                <p class="text-sm text-gray-600 mb-6">Anda pasti mahu log keluar?</p>
+                <div class="flex gap-3 justify-center">
+                    <button onclick="closeLogoutModal()" class="px-5 py-2.5 text-gray-600 hover:bg-gray-100 rounded-xl text-sm font-medium transition">Batal</button>
+                    <button onclick="handleLogout()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-red-200 transition transform active:scale-95">Ya, Log Keluar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4.6: Modal Galeri Gambar (Slider & Zoom) -->
+        <div id="receiptImageModal" onclick="closeReceiptModal()" class="fixed inset-0 bg-black/95 z-[300] hidden flex items-center justify-center transition-opacity opacity-0 backdrop-blur-sm">
+            <div onclick="event.stopPropagation()" class="relative w-full max-w-4xl max-h-[100vh] p-4 flex flex-col items-center justify-center h-full">
+                <button onclick="closeReceiptModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition p-2 z-20 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center hover:scale-110"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="relative w-full flex items-center justify-center mt-6">
+                    <button id="btnPrevImage" onclick="prevImage()" class="absolute left-2 md:left-10 text-white bg-black/60 hover:bg-black/90 rounded-full w-12 h-12 flex items-center justify-center transition z-20 hidden hover:scale-110 border border-white/20"><i class="fa-solid fa-chevron-left text-lg"></i></button>
+                    <div class="w-full flex items-center justify-center overflow-hidden rounded-xl relative z-10" style="height: 75vh;">
+                        <img id="galleryMainImage" src="" class="max-w-full max-h-full object-contain shadow-2xl transition-opacity duration-200 touch-none cursor-move" alt="Gambar Lampiran">
+                    </div>
+                    <button id="btnNextImage" onclick="nextImage()" class="absolute right-2 md:right-10 text-white bg-black/60 hover:bg-black/90 rounded-full w-12 h-12 flex items-center justify-center transition z-20 hidden hover:scale-110 border border-white/20"><i class="fa-solid fa-chevron-right text-lg"></i></button>
+                </div>
+                <div class="mt-4 flex flex-col items-center">
+                    <span id="galleryCounter" class="text-white text-xs font-bold bg-white/20 px-3 py-1 rounded-full mb-3 hidden tracking-widest">1 / 1</span>
+                    <p class="text-center text-gray-400 text-[10px]">Klik di luar kotak atau butang X untuk tutup.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4.7: Modal Bajet & Kemaskini Target -->
+        <div id="budgetModal" onclick="closeBudgetModal()" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[200] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[95%] max-w-lg shadow-2xl transform scale-95 transition-transform duration-300 relative max-h-[90vh] overflow-y-auto">
+                <button onclick="closeBudgetModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+                <div class="flex items-center justify-between mb-6 mt-2 pr-6">
+                    <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">Anggaran Bajet</h3>
+                    <button id="btnEditBudget" onclick="openEditBudgetModal()" class="hidden text-[10px] bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-2 py-1 rounded-lg font-bold transition items-center gap-1"><i class="fa-solid fa-pen-to-square"></i> Kemaskini</button>
+                </div>
+                <div class="mb-6">
+                    <h4 class="font-bold text-sm text-gray-800 mb-2">1. Kutipan Pemburu</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="border-b-2 border-gray-100 text-gray-600"><tr><th class="pb-2 font-medium">Kategori</th><th class="pb-2 font-medium text-center">Bilangan</th><th class="pb-2 font-medium text-center">Bayaran seorang</th><th class="pb-2 font-medium text-right">Jumlah</th></tr></thead>
+                            <tbody class="divide-y divide-gray-100 text-gray-700">
+                                <tr><td class="py-3">Owner Kereta</td><td class="py-3 text-center">3 orang</td><td class="py-3 text-center">RM250</td><td class="py-3 text-right">RM750</td></tr>
+                                <tr><td class="py-3">Pemburu</td><td class="py-3 text-center">9 orang</td><td class="py-3 text-center">RM450</td><td class="py-3 text-right">RM4,050</td></tr>
+                                <tr class="font-bold bg-gray-50/50"><td class="py-3">Jumlah</td><td class="py-3 text-center">12 orang</td><td class="py-3 text-center"></td><td class="py-3 text-right text-emerald-600">RM4,800</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm text-gray-800 mb-2">2. Anggaran Kos Trip</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="border-b-2 border-gray-100 text-gray-600"><tr><th class="pb-2 font-medium">Perkara</th><th class="pb-2 font-medium text-right">Kos</th></tr></thead>
+                            <tbody class="divide-y divide-gray-100 text-gray-700">
+                                <tr><td class="py-3">Bot</td><td class="py-3 text-right">RM2,700</td></tr>
+                                <tr><td class="py-3">Homestay</td><td class="py-3 text-right">RM520</td></tr>
+                                <tr><td class="py-3">Transport</td><td class="py-3 text-right">RM1,200</td></tr>
+                                <tr><td class="py-3">Lain-lain</td><td class="py-3 text-right">RM380</td></tr>
+                                <tr class="font-bold bg-gray-50/50"><td class="py-3">Jumlah kos</td><td class="py-3 text-right text-red-500">RM4,800</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="editBudgetModal" onclick="closeEditBudgetModal()" class="fixed inset-0 bg-slate-900/95 backdrop-blur-sm z-[250] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[95%] max-w-md shadow-2xl transform scale-95 transition-transform duration-300 relative max-h-[95vh] overflow-y-auto">
+                <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-calculator text-blue-500"></i> Tetapan Bajet</h3>
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <p class="text-[10px] font-bold text-blue-800 uppercase mb-2">1. Tetapan Peserta</p>
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Bil. Owner</label><input type="number" id="inputOwnerQty" class="w-full p-2 text-xs rounded border outline-none focus:border-blue-500" placeholder="Cth: 3"></div>
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Bayaran Owner (RM)</label><input type="number" id="inputOwnerPrice" class="w-full p-2 text-xs rounded border outline-none focus:border-blue-500" placeholder="Cth: 250"></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Bil. Angler Biasa</label><input type="number" id="inputAnglerQty" class="w-full p-2 text-xs rounded border outline-none focus:border-blue-500" placeholder="Cth: 9"></div>
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Bayaran Angler (RM)</label><input type="number" id="inputAnglerPrice" class="w-full p-2 text-xs rounded border outline-none focus:border-blue-500" placeholder="Cth: 450"></div>
+                        </div>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                        <p class="text-[10px] font-bold text-amber-800 uppercase mb-2">2. Tetapan Kos Trip (RM)</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Sewa Bot</label><input type="number" id="inputKosBot" class="w-full p-2 text-xs rounded border outline-none focus:border-amber-500" placeholder="Cth: 2700"></div>
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Homestay</label><input type="number" id="inputKosHomestay" class="w-full p-2 text-xs rounded border outline-none focus:border-amber-500" placeholder="Cth: 520"></div>
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Pengangkutan (Transport)</label><input type="number" id="inputKosTransport" class="w-full p-2 text-xs rounded border outline-none focus:border-amber-500" placeholder="Cth: 1200"></div>
+                            <div><label class="block text-[10px] text-gray-600 mb-1">Lain-lain</label><input type="number" id="inputKosLain" class="w-full p-2 text-xs rounded border outline-none focus:border-amber-500" placeholder="Cth: 380"></div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" onclick="closeEditBudgetModal()" class="w-1/3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition">Batal</button>
+                        <button type="button" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition shadow-lg">Simpan Bajet</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="targetPromptModal" onclick="closeTargetPromptModal()" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[150] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[85%] max-w-sm shadow-2xl transform scale-95 transition-transform duration-300 relative">
+                <h3 class="font-bold text-lg text-slate-800 mb-2">Kemaskini Target</h3>
+                <p class="text-xs text-slate-500 mb-4">Masukkan jumlah target keseluruhan baru (RM):</p>
+                <input type="number" id="newTargetInput" step="0.01" min="0" onkeydown="jumpTen(event)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none mb-6" placeholder="Cth: 4750">
+                <div class="flex gap-3">
+                    <button onclick="closeTargetPromptModal()" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-sm font-bold transition">Batal</button>
+                    <button onclick="submitNewTarget()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition shadow-lg">Simpan</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4.8: Modal Konfigurasi Admin (Ahli, Perbelanjaan, Tentatif, Checklist) -->
+        <div id="memberConfigModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[130] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div class="bg-white rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl relative max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2"><i class="fa-solid fa-user-pen text-blue-600"></i> <span id="memberModalTitle">Urus Ahli</span></h3>
+                    <button onclick="toggleMemberConfigModal(false)" class="text-gray-300 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <input type="hidden" id="configMemberId">
+                <div class="bg-blue-50 p-3 rounded-xl border border-blue-100 mb-4">
+                    <div class="flex gap-2 mb-3">
+                        <div class="w-3/5"><label class="block text-xs font-bold text-blue-800 mb-1">Nama Ahli</label><input type="text" id="configMemberName" class="w-full p-2 bg-white border border-blue-200 rounded-lg text-sm focus:border-blue-500 outline-none" placeholder="Nama..."></div>
+                        <div class="w-2/5"><label class="block text-xs font-bold text-indigo-800 mb-1">Target (RM)</label><input type="number" id="configMemberTarget" step="0.01" min="0" class="w-full p-2 bg-white border border-indigo-200 rounded-lg text-sm focus:border-indigo-500 outline-none" placeholder="500"></div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="deleteMember()" id="btnDeleteMember" class="hidden w-1/3 py-2 bg-red-100 text-red-600 hover:bg-red-200 rounded-lg text-xs font-bold transition">Padam</button>
+                        <button type="button" onclick="saveMemberProfile()" id="btnSaveProfile" class="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-sm">Simpan Profil</button>
+                    </div>
+                </div>
+                <div id="paymentSectionWrapper" class="hidden">
+                    <div id="paymentBoxContainer" class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 mb-4 transition-colors duration-300">
+                        <input type="hidden" id="editHistoryIndex">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[10px] font-bold text-emerald-700 uppercase flex items-center gap-1" id="paymentBoxTitle"><i class="fa-solid fa-plus-circle"></i> Tambah Bayaran</p>
+                            <button type="button" id="btnCancelHistoryEdit" onclick="cancelHistoryEdit()" class="hidden text-[10px] bg-gray-200 hover:bg-gray-300 px-2 py-0.5 rounded text-gray-600 font-bold">Batal</button>
+                        </div>
+                        <div class="w-full mb-2">
+                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Kategori</label>
+                            <select id="initPayType" onchange="toggleOtherPayType()" class="w-full p-2 bg-white border border-emerald-200 rounded-lg text-xs focus:border-emerald-500 outline-none">
+                                <option value="Bayaran Tabung">Bayaran Tabung (Target)</option>
+                                <option value="Lain-lain">Lain-lain</option>
+                            </select>
+                        </div>
+                        <div id="otherPayTypeContainer" class="w-full mb-2 hidden">
+                            <label class="block text-[10px] font-bold text-gray-600 mb-1">Perincian Kategori</label>
+                            <input type="text" id="initPayOther" class="w-full p-2 bg-white border border-emerald-200 rounded-lg text-xs focus:border-emerald-500 outline-none" placeholder="Cth: T-Shirt, Sumbangan...">
+                        </div>
+                        <div class="flex gap-2 mb-3">
+                            <div class="w-1/2"><label class="block text-[10px] font-bold text-gray-600 mb-1">Tarikh</label><input type="date" id="initPayDate" class="w-full p-2 bg-white border border-emerald-200 rounded-lg text-xs focus:border-emerald-500 outline-none"></div>
+                            <div class="w-1/2"><label class="block text-[10px] font-bold text-gray-600 mb-1">Jumlah (RM)</label><input type="number" id="initPayAmount" step="0.01" min="0" onkeydown="jumpTen(event)" class="w-full p-2 bg-white border border-emerald-200 rounded-lg text-xs focus:border-emerald-500 outline-none" placeholder="0.00"></div>
+                        </div>
+                        <button type="button" onclick="savePaymentRecord()" id="btnSavePayment" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-sm">Rekod Bayaran</button>
+                    </div>
+                    <div id="memberHistorySection" class="pt-2 border-t border-dashed border-gray-300 hidden">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Sejarah Bayaran</p>
+                        <div id="memberHistoryListContainer" class="max-h-32 overflow-y-auto space-y-2 text-xs"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="expenseModal" onclick="toggleExpenseModal(false)" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[130] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl relative">
+                <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-file-invoice-dollar text-red-500"></i><span id="expenseModalTitle">Rekod Belanja</span></h3>
+                <form onsubmit="submitExpense(event)" class="space-y-4">
+                    <input type="hidden" id="expId">
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Tarikh</label><input type="date" id="expDate" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-red-500 outline-none" required></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Kategori</label>
+                        <select id="expCategory" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-red-500 outline-none">
+                            <option value="Pengangkutan">Pengangkutan</option><option value="Peralatan Teknikal">Peralatan Teknikal</option><option value="Makanan & Minuman">Makanan & Minuman</option><option value="Penginapan">Penginapan</option><option value="Lain-lain">Lain-lain</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Butiran</label><input type="text" id="expDetail" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-red-500 outline-none" placeholder="Contoh: Nasi Lemak" required></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Link Resit (URL)</label>
+                        <div class="relative"><span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-link"></i></span><input type="url" id="expReceiptUrl" class="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-red-500 outline-none" placeholder="https://..." onfocus="this.select()"></div>
+                        <p class="text-[9px] text-gray-400 mt-1">*Paste link gambar di sini</p>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Jumlah (RM)</label><input type="number" id="expAmount" step="0.01" min="0" onkeydown="jumpTen(event)" class="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:border-red-500 outline-none" placeholder="0.00" required></div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" onclick="deleteExpense()" id="btnDeleteExp" class="hidden w-1/3 py-3 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-xs font-bold transition"><i class="fa-solid fa-trash"></i> Padam</button>
+                        <button type="submit" id="btnExpSubmit" class="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold transition shadow-lg">Simpan</button>
+                    </div>
+                </form>
+                <button onclick="toggleExpenseModal(false)" class="absolute top-4 right-4 text-gray-300 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+        <div id="tentativeModal" onclick="toggleTentativeModal(false)" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[130] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl relative">
+                <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-map-location-dot text-indigo-500"></i><span id="tentativeModalTitle">Urus Tentatif</span></h3>
+                <form onsubmit="submitTentative(event)" class="space-y-4">
+                    <input type="hidden" id="tentId">
+                    <div class="flex gap-2">
+                        <div class="w-1/2"><label class="block text-xs font-bold text-gray-700 mb-1">Masa / Hari</label><input type="text" id="tentTime" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-500" placeholder="Cth: 8:00 AM (Hari 1)" required></div>
+                        <div class="w-1/2"><label class="block text-xs font-bold text-gray-700 mb-1">Susunan (No)</label><input type="number" id="tentSort" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-500" placeholder="1, 2, 3..." required></div>
+                    </div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Tajuk Aktiviti</label><input type="text" id="tentTitle" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-500" placeholder="Cth: Berkumpul di Jeti" required></div>
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Butiran (Guna 'Enter' untuk baris baru)</label><textarea id="tentDetails" rows="4" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-500" placeholder=": Penerangan aktiviti..."></textarea></div>
+                    <div class="flex gap-2">
+                        <div class="w-1/2">
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Tema Warna</label>
+                            <select id="tentColor" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-500">
+                                <option value="rose">Merah (Rose)</option><option value="amber">Kuning (Amber)</option><option value="emerald">Hijau (Emerald)</option><option value="orange">Oren (Orange)</option><option value="blue">Biru (Blue)</option>
+                            </select>
+                        </div>
+                        <div class="w-1/2"><label class="block text-[10px] font-bold text-gray-700 mb-1">Ikon (FontAwesome)</label><input type="text" id="tentIcon" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-indigo-500" placeholder="fa-car"></div>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" onclick="deleteTentative()" id="btnDeleteTent" class="hidden w-1/3 py-3 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-xs font-bold transition"><i class="fa-solid fa-trash"></i> Padam</button>
+                        <button type="submit" id="btnTentSubmit" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition shadow-lg">Simpan</button>
+                    </div>
+                </form>
+                <button onclick="toggleTentativeModal(false)" class="absolute top-4 right-4 text-gray-300 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+        <div id="checklistModal" onclick="toggleChecklistModal(false)" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[130] hidden flex items-center justify-center transition-opacity opacity-0">
+            <div onclick="event.stopPropagation()" class="bg-white rounded-2xl p-6 w-[90%] max-w-sm shadow-2xl relative">
+                <h3 class="font-bold text-lg text-slate-800 mb-4 flex items-center gap-2"><i class="fa-solid fa-clipboard-check text-teal-500"></i><span id="checklistModalTitle">Urus Checklist</span></h3>
+                <form onsubmit="submitChecklist(event)" class="space-y-3">
+                    <input type="hidden" id="chkId">
+                    <div><label class="block text-xs font-bold text-gray-700 mb-1">Kategori Utama</label><input type="text" id="chkCategory" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-teal-500" placeholder="Cth: Memancing" required></div>
+                    <div class="flex gap-2">
+                        <div class="w-1/2">
+                            <label class="block text-[10px] font-bold text-gray-700 mb-1">Tema Warna</label>
+                            <select id="chkColor" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-teal-500">
+                                <option value="emerald">Hijau (Emerald)</option><option value="amber">Kuning (Amber)</option><option value="blue">Biru (Blue)</option><option value="red">Merah (Red)</option><option value="purple">Ungu (Purple)</option>
+                            </select>
+                        </div>
+                        <div class="w-1/2"><label class="block text-[10px] font-bold text-gray-700 mb-1">Ikon (FontAwesome)</label><input type="text" id="chkIcon" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-teal-500" placeholder="fa-fish"></div>
+                    </div>
+                    <div class="w-1/2"><label class="block text-xs font-bold text-gray-700 mb-1">Susunan (No)</label><input type="number" id="chkSort" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-teal-500" placeholder="1, 2, 3..." required></div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">Senarai Barang</label>
+                        <p class="text-[9px] text-gray-400 mb-1">Format: <b>Nama Barang|wajib</b> ATAU <b>Nama Barang|pilihan</b> (Enter untuk baris baru)</p>
+                        <textarea id="chkItems" rows="4" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs outline-none focus:border-teal-500" placeholder="Joran & Mesin|wajib&#10;Tali spare|pilihan"></textarea>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" onclick="deleteChecklist()" id="btnDeleteChk" class="hidden w-1/3 py-3 bg-red-100 text-red-600 hover:bg-red-200 rounded-xl text-xs font-bold transition"><i class="fa-solid fa-trash"></i> Padam</button>
+                        <button type="submit" id="btnChkSubmit" class="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-bold transition shadow-lg">Simpan</button>
+                    </div>
+                </form>
+                <button onclick="toggleChecklistModal(false)" class="absolute top-4 right-4 text-gray-300 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
