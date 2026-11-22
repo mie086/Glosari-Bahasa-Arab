@@ -168,7 +168,9 @@
                 <!-- Bar Kemajuan Hafalan -->
                 <div class="hafalan-stats-bar">
                     <div class="stats-meta-row">
-                        <span id="hafalanCounterText" class="counter-pill">Kad 0 / 0</span>
+                        <select id="hafalanCardSelect" class="card-jump-select" aria-label="Pilih Kad Hafalan">
+                            <option value="0">Tiada Kad</option>
+                        </select>
                         <span class="mastered-pill">✔ Dikuasai: <span id="hafalanMasteredCount">0 / 0</span></span>
                     </div>
                     <div class="progress-track">
@@ -453,6 +455,9 @@
             </div>
         </section>
     </main>
+    <footer class="site-disclaimer">
+        <p><strong>Penafian:</strong> Portal persendirian ini masih dalam pembangunan serta penambahbaikan berterusan. Segala kandungan belum diverifikasi sepenuhnya; pemilik tidak menanggung sebarang liabiliti sekiranya maklumat di sini dijadikan rujukan.</p>
+    </footer>
 </div>
 
 <button type="button" class="floating-search-btn" id="btnFloatingSearch" title="Langkau ke Kotak Carian">🔍</button>
@@ -499,6 +504,23 @@
             <button type="button" class="btn btn-secondary" id="btnCustomPromptCancel">Batal</button>
             <button type="button" class="btn btn-primary" id="btnCustomPromptOk">OK Pautkan Semua</button>
         </div>
+    </div>
+</div>
+
+<!-- POP-UP PENAFIAN (KIRI ATAS DENGAN TIMER) -->
+<div id="disclaimerPopup" class="disclaimer-popup" role="alert" aria-live="polite">
+    <div class="disclaimer-popup-header">
+        <span class="disclaimer-popup-title">⚠️ Penafian (Disclaimer)</span>
+        <div class="disclaimer-popup-right">
+            <span id="disclaimerTimerText" class="disclaimer-timer-text">8s</span>
+            <button type="button" id="btnCloseDisclaimer" class="disclaimer-close-btn" aria-label="Tutup Penafian">&times;</button>
+        </div>
+    </div>
+    <p class="disclaimer-popup-body">
+        Portal persendirian ini masih dalam pembangunan serta penambahbaikan berterusan. Segala kandungan belum diverifikasi sepenuhnya; pemilik tidak menanggung sebarang liabiliti sekiranya maklumat di sini dijadikan rujukan.
+    </p>
+    <div class="disclaimer-timer-track">
+        <div id="disclaimerTimerBar" class="disclaimer-timer-bar"></div>
     </div>
 </div>
 
