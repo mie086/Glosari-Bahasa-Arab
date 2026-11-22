@@ -24,6 +24,11 @@
     padding: 0;
 }
 
+html, body {
+    max-width: 100%;
+    overflow-x: clip;
+}
+
 body {
     font-family: var(--font-main);
     background-color: var(--bg-color);
@@ -45,6 +50,7 @@ body {
     padding: 8px 16px;
     font-size: 0.82rem;
     border-bottom: 1px solid #1e293b;
+    width: 100%;
 }
 
 .utility-inner {
@@ -71,6 +77,7 @@ body {
     border-radius: 50%;
     background-color: #10b981;
     box-shadow: 0 0 8px #10b981;
+    flex-shrink: 0;
 }
 
 .font-scaler {
@@ -1077,11 +1084,13 @@ mark.admin-highlight {
 
 .stats-meta-row {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 8px 12px;
     font-size: 0.86rem;
     font-weight: 700;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .counter-pill {
@@ -1090,6 +1099,32 @@ mark.admin-highlight {
 
 .mastered-pill {
     color: #059669;
+    white-space: nowrap;
+}
+
+/* Dropdown Pilihan Kad Hafalan (Responsif & Tidak Melimpah) */
+.card-jump-select {
+    font-family: inherit;
+    font-size: calc(0.86rem * var(--font-scale));
+    font-weight: 700;
+    color: var(--primary-color);
+    background-color: #f8fafc;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    flex: 1 1 220px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card-jump-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
 .progress-track {
@@ -1331,30 +1366,9 @@ mark.admin-highlight {
     opacity: 1;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-/* Dropdown Pilihan Kad Hafalan */
-.card-jump-select {
-    font-family: inherit;
-    font-size: calc(0.86rem * var(--font-scale));
-    font-weight: 700;
-    color: var(--primary-color);
-    background-color: #f8fafc;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
-    padding: 6px 12px;
-    max-width: 100%;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.card-jump-select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
-}
+/* =========================================================
+   FOOTER PENAFIAN (DISCLAIMER)
+========================================================= */
 .site-disclaimer {
     margin-top: 36px;
     padding-top: 16px;
@@ -1364,6 +1378,7 @@ mark.admin-highlight {
     color: var(--text-muted);
     line-height: 1.6;
 }
+
 /* =========================================================
    POP-UP PENAFIAN (KIRI ATAS DENGAN TIMER)
 ========================================================= */
@@ -1456,4 +1471,76 @@ mark.admin-highlight {
     width: 100%;
     background-color: #f59e0b;
     transition: width 1s linear;
+}
+
+/* =========================================================
+   PEMBAIKAN RESPONSIF PAPARAN MOBILE (<= 600px)
+========================================================= */
+@media (max-width: 600px) {
+    .container {
+        padding: 16px 12px;
+    }
+
+    .card {
+        padding: 18px 16px;
+    }
+
+    .flashcard-face {
+        padding: 20px 16px;
+    }
+
+    .disclaimer-popup {
+        top: 64px;
+    }
+
+    /* Susun butang Rawak & Reset penuh sebaris */
+    .hafalan-btn-group {
+        width: 100%;
+    }
+
+    .hafalan-btn-group .btn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Bar kemajuan: dropdown penuh di atas, status Dikuasai kemas di kanan bawah */
+    .stats-meta-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mastered-pill {
+        align-self: flex-end;
+    }
+
+    /* Butang navigasi kad: Sebelum & Seterusnya sebaris, Sudah Hafal penuh di bawah */
+    .flashcard-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .flashcard-actions .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 11px 12px;
+    }
+
+    #btnPrevCard {
+        order: 1;
+    }
+
+    #btnNextCard {
+        order: 2;
+    }
+
+    #btnToggleMastered {
+        grid-column: 1 / -1;
+        order: 3;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
