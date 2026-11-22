@@ -27,5 +27,8 @@ Aplikasi web responsif untuk rujukan istilah tatabahasa Bahasa Arab, analisis ay
 ├── index.html   # Struktur utama antaramuka pengguna & modal
 ├── style.css    # Gaya tersuai, animasi & susun atur responsif
 └── script.js    # Logik aplikasi, sambungan Supabase & kawalan admin
+```
 
-> **Disclaimer:**This repository is a personal project under active development. For private use only.
+---
+
+> **Disclaimer:** This repository is a personal project under active development. For private use only.
