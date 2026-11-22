@@ -12,6 +12,59 @@ if (typeof DOMPurify === "undefined") {
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============================================================================
+// KONFIGURASI UID PENTADBIR & PEMASA AUTO-LOGOUT
+// ============================================================================
+const ADMIN_UIDS = ["1f2fa920-266a-4221-a4f3-05047ebda41d"];
+let isAdmin = false;
+let isSigningOutUnauthorized = false;
+
+const AUTO_LOGOUT_MS = 15 * 60 * 1000; // 15 minit tidak aktif
+let autoLogoutTimer = null;
+let isAutoLogoutActive = false;
+const ACTIVITY_EVENTS = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+
+function isAuthorizedAdminSession(session) {
+    return !!(session && session.user && ADMIN_UIDS.includes(session.user.id));
+}
+
+function resetAutoLogoutTimer() {
+    if (!isAdmin) return;
+    clearTimeout(autoLogoutTimer);
+    autoLogoutTimer = setTimeout(async () => {
+        if (!isAdmin) return;
+        stopAutoLogoutTimer();
+        isAdmin = false;
+        await supabaseClient.auth.signOut();
+        updateAdminUI(null);
+        paparMesejLogMasuk(
+            "Sesi pentadbir telah tamat secara automatik kerana tiada aktiviti selama 15 minit. Sila log masuk semula.",
+            "warning"
+        );
+    }, AUTO_LOGOUT_MS);
+}
+
+function startAutoLogoutTimer() {
+    if (!isAutoLogoutActive) {
+        ACTIVITY_EVENTS.forEach(evt => {
+            window.addEventListener(evt, resetAutoLogoutTimer, { passive: true });
+        });
+        isAutoLogoutActive = true;
+    }
+    resetAutoLogoutTimer();
+}
+
+function stopAutoLogoutTimer() {
+    clearTimeout(autoLogoutTimer);
+    autoLogoutTimer = null;
+    if (isAutoLogoutActive) {
+        ACTIVITY_EVENTS.forEach(evt => {
+            window.removeEventListener(evt, resetAutoLogoutTimer);
+        });
+        isAutoLogoutActive = false;
+    }
+}
+
+// ============================================================================
 // KESELAMATAN FRONTEND: Sanitization, Allowlist & Escaping
 // ============================================================================
 const SAFE_HTML_CONFIG = {
@@ -271,7 +324,7 @@ if (btnFloatingSearch) {
 }
 
 // ============================================================================
-// MUAT DATA, DATALIST & PENYUSUNAN BERNOMBOR SURAH / AYAT
+// MUAT DATA SERENTAK (Promise.all), DATALIST & PENYUSUNAN SURAH / AYAT
 // ============================================================================
 function parseSurahAyat(rawStr) {
     const teks = (rawStr || "").trim();
@@ -378,31 +431,35 @@ if (quickSelectAyat) {
 }
 
 async function loadDataFromSupabase() {
-    const resIstilah = await supabaseClient
-        .from("istilah_arab")
-        .select("*")
-        .order("title_ms", { ascending: true });
-    if (resIstilah.error) console.error("Ralat istilah:", resIstilah.error.message);
-    else dataIstilah = resIstilah.data || [];
+    try {
+        const [resIstilah, resAyat, resQuran] = await Promise.all([
+            supabaseClient.from("istilah_arab").select("*").order("title_ms", { ascending: true }),
+            supabaseClient.from("koleksi_ayat").select("*"),
+            supabaseClient.from("koleksi_quran").select("*")
+        ]);
 
-    const resAyat = await supabaseClient.from("koleksi_ayat").select("*");
-    if (resAyat.error) console.error("Ralat ayat:", resAyat.error.message);
-    else dataAyat = resAyat.data || [];
+        if (resIstilah.error || resAyat.error || resQuran.error) {
+            throw (resIstilah.error || resAyat.error || resQuran.error);
+        }
 
-    const resQuran = await supabaseClient
-        .from("koleksi_quran")
-        .select("*");
-    if (resQuran.error) console.error("Ralat quran:", resQuran.error.message);
-    else dataQuran = susunIkutSurahDanAyat(resQuran.data || []);
+        dataIstilah = resIstilah.data || [];
+        dataAyat = resAyat.data || [];
+        dataQuran = susunIkutSurahDanAyat(resQuran.data || []);
 
-    renderAdminList();
-    renderAdminAyatList();
-    renderAdminQuranList();
-    renderAlphabeticalDirectory();
-    kemaskiniSenaraiDatalist();
-    kemaskiniSenaraiSurahDropdown();
-    kemaskiniQuickSelectAyat();
-    initHafalanDeck();
+        renderAdminList();
+        renderAdminAyatList();
+        renderAdminQuranList();
+        renderAlphabeticalDirectory();
+        kemaskiniSenaraiDatalist();
+        kemaskiniSenaraiSurahDropdown();
+        kemaskiniQuickSelectAyat();
+        initHafalanDeck();
+    } catch (error) {
+        console.error("Gagal menarik data daripada Supabase:", error.message);
+        if (resultsList) {
+            resultsList.innerHTML = `<div class="alert-error" style="padding:14px; border-radius:10px; margin-bottom:16px;">Gagal menyambung ke pangkalan data. Sila muat semula halaman sebentar lagi.</div>`;
+        }
+    }
 }
 
 function kemaskiniSenaraiDatalist() {
@@ -773,6 +830,7 @@ if (btnTabJadualQuran) {
 // ============================================================================
 if (btnBukaBorangQuran) {
     btnBukaBorangQuran.addEventListener("click", () => {
+        if (!isAdmin) return;
         closeForm();
         closeFormAyat();
         quranForm.reset();
@@ -795,6 +853,10 @@ function closeFormQuran() {
 if (quranForm) {
     quranForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!isAdmin) {
+            alert("Akses ditolak. Sila log masuk sebagai Pentadbir Sistem.");
+            return;
+        }
         const noSurahClean = inputQuranNoSurah ? inputQuranNoSurah.value.trim() : "";
         const namaSurahClean = inputQuranSurah.value.trim().replace(/^surah\s+/i, "");
         const noAyatClean = inputQuranNoAyat ? inputQuranNoAyat.value.trim() : "";
@@ -881,6 +943,7 @@ if (adminSearchQuranInput) {
 }
 
 function editQuran(id) {
+    if (!isAdmin) return;
     const item = dataQuran.find(i => String(i.id) === String(id));
     if (!item) return;
     closeForm();
@@ -901,6 +964,7 @@ function editQuran(id) {
 }
 
 async function deleteQuran(id) {
+    if (!isAdmin) return;
     if (confirm("Adakah anda pasti mahu memadam rekod ayat Al-Quran ini?")) {
         const { error } = await supabaseClient.from("koleksi_quran").delete().eq("id", id);
         if (error) alert("Ralat Keselamatan RLS: " + error.message);
@@ -1329,6 +1393,7 @@ if (terjemahanMsEditor) terjemahanMsEditor.addEventListener("input", updateKeywo
 // ============================================================================
 if (btnBukaBorangAyat) {
     btnBukaBorangAyat.addEventListener("click", () => {
+        if (!isAdmin) return;
         closeForm();
         closeFormQuran();
         ayatForm.reset();
@@ -1413,6 +1478,10 @@ document.addEventListener("click", (e) => {
 if (ayatForm) {
     ayatForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!isAdmin) {
+            alert("Akses ditolak. Sila log masuk sebagai Pentadbir Sistem.");
+            return;
+        }
         updateKeywordsList();
         const ayatObject = {
             ayat_ar: sanitizeEditorHtml(ayatArEditor.innerHTML.trim()),
@@ -1433,6 +1502,7 @@ if (ayatForm) {
 }
 
 function editAyat(id) {
+    if (!isAdmin) return;
     const item = dataAyat.find(i => String(i.id) === String(id));
     if (!item) return;
     closeForm();
@@ -1447,6 +1517,7 @@ function editAyat(id) {
 }
 
 async function deleteAyat(id) {
+    if (!isAdmin) return;
     if (confirm("Adakah anda pasti mahu memadam koleksi ayat ini?")) {
         const { error } = await supabaseClient.from("koleksi_ayat").delete().eq("id", id);
         if (error) alert("Ralat Keselamatan RLS: " + error.message);
@@ -1806,6 +1877,10 @@ if (adminSearchInput) {
 if (termForm) {
     termForm.addEventListener("submit", async (e) => {
         e.preventDefault();
+        if (!isAdmin) {
+            alert("Akses ditolak. Sila log masuk sebagai Pentadbir Sistem.");
+            return;
+        }
         const id = inputId.value || "term-" + Date.now();
         const kwArray = inputKeywords.value.split(",").map(k => k.trim().toLowerCase()).filter(k => k !== "");
         const ciriElements = ciriSectionsContainer.querySelectorAll(".ciri-section-item");
@@ -1874,6 +1949,7 @@ if (termForm) {
 }
 
 function editItem(id) {
+    if (!isAdmin) return;
     const item = dataIstilah.find(i => String(i.id) === String(id));
     if (!item) return;
     closeFormAyat();
@@ -1914,6 +1990,7 @@ function editItem(id) {
 }
 
 async function deleteItem(id) {
+    if (!isAdmin) return;
     if (confirm("Adakah anda pasti mahu memadam istilah ini dari pangkalan data cloud?")) {
         const { error } = await supabaseClient.from("istilah_arab").delete().eq("id", id);
         if (error) alert("Ralat Keselamatan RLS: " + error.message);
@@ -1928,6 +2005,7 @@ async function deleteItem(id) {
 
 if (btnBukaBorang) {
     btnBukaBorang.addEventListener("click", () => {
+        if (!isAdmin) return;
         closeFormAyat();
         closeFormQuran();
         termForm.reset();
@@ -2163,7 +2241,7 @@ function applyFormat(textareaId, type, colorValue = null) {
 }
 
 // ============================================================================
-// KESELAMATAN LOG MASUK & KAWALAN PAPARAN (UI DINAMIK & KUKUH)
+// KESELAMATAN LOG MASUK, SEMAKAN UID ADMIN & AUTO-LOGOUT
 // ============================================================================
 let jumlahPercubaanGagal = parseInt(sessionStorage.getItem("jpg") || "0", 10);
 let kunciLogMasukSehingga = parseInt(sessionStorage.getItem("kls") || "0", 10);
@@ -2260,25 +2338,36 @@ if (loginForm) {
                 simpanStatusKunci();
                 paparMesejLogMasuk(`E-mel atau kata laluan tidak sah.<br>Baki percubaan anda: <strong>${3 - jumlahPercubaanGagal} kali</strong>`, "error");
             }
-        } else {
-            jumlahPercubaanGagal = 0;
-            kunciLogMasukSehingga = 0;
-            simpanStatusKunci();
-
-            if (loginMsgBox) loginMsgBox.style.display = "none";
-            updateAdminUI(data.session);
+            return;
         }
-    });
-}
 
-async function checkUserSession() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    updateAdminUI(session);
+        // Semakan UID Admin serta-merta selepas log masuk berjaya
+        if (!isAuthorizedAdminSession(data.session)) {
+            await supabaseClient.auth.signOut();
+            isAdmin = false;
+            stopAutoLogoutTimer();
+            updateAdminUI(null);
+            paparMesejLogMasuk("<strong>Akses Ditolak:</strong> Akaun ini tidak mempunyai kebenaran Pentadbir Sistem.", "error");
+            return;
+        }
+
+        jumlahPercubaanGagal = 0;
+        kunciLogMasukSehingga = 0;
+        simpanStatusKunci();
+
+        if (loginMsgBox) loginMsgBox.style.display = "none";
+        isAdmin = true;
+        updateAdminUI(data.session);
+        startAutoLogoutTimer();
+    });
 }
 
 function updateAdminUI(session) {
     if (!adminAuthBox || !adminDashboardBox) return;
-    if (session) {
+    const authorized = isAuthorizedAdminSession(session);
+    isAdmin = authorized;
+
+    if (authorized) {
         adminAuthBox.style.display = "none";
         adminDashboardBox.style.display = "block";
         renderAdminList();
@@ -2287,18 +2376,56 @@ function updateAdminUI(session) {
     } else {
         adminAuthBox.style.display = "block";
         adminDashboardBox.style.display = "none";
+        closeForm();
+        closeFormAyat();
+        closeFormQuran();
     }
+}
+
+async function checkUserSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && !isAuthorizedAdminSession(session)) {
+        await supabaseClient.auth.signOut();
+        updateAdminUI(null);
+        stopAutoLogoutTimer();
+        paparMesejLogMasuk("<strong>Akses Ditolak:</strong> Akaun ini tidak mempunyai kebenaran Pentadbir Sistem.", "error");
+        return;
+    }
+    updateAdminUI(session);
+    if (isAdmin) startAutoLogoutTimer();
+    else stopAutoLogoutTimer();
 }
 
 if (btnLogKeluar) {
     btnLogKeluar.addEventListener("click", async () => {
+        stopAutoLogoutTimer();
+        isAdmin = false;
         await supabaseClient.auth.signOut();
         updateAdminUI(null);
     });
 }
 
-supabaseClient.auth.onAuthStateChange((_event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    const isAuthorizedAdmin = isAuthorizedAdminSession(session);
+    isAdmin = isAuthorizedAdmin;
     updateAdminUI(session);
+
+    if (isAdmin) {
+        startAutoLogoutTimer();
+    } else {
+        stopAutoLogoutTimer();
+        if (session && event !== "SIGNED_OUT" && !isSigningOutUnauthorized) {
+            isSigningOutUnauthorized = true;
+            setTimeout(async () => {
+                try {
+                    await supabaseClient.auth.signOut();
+                    paparMesejLogMasuk("<strong>Akses Ditolak:</strong> Akaun ini tidak mempunyai kebenaran Pentadbir Sistem.", "error");
+                } finally {
+                    isSigningOutUnauthorized = false;
+                }
+            }, 0);
+        }
+    }
 });
 
 // ============================================================================
