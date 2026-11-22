@@ -1,10 +1,18 @@
 const SUPABASE_URL = "https://ejivaczazdimurhtlmsj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqaXZhY3phemRpbXVyaHRsbXNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMzEzMjAsImV4cCI6MjA5NDgwNzMyMH0._pjuat4uPjujjRiZyj1331vySeMXPGU_SGpzdfkfSSg";
 
+if (!window.supabase || typeof window.supabase.createClient !== "function") {
+    throw new Error("Supabase SDK gagal dimuat. Semak sambungan rangkaian atau hash SRI.");
+}
+
+if (typeof DOMPurify === "undefined") {
+    throw new Error("DOMPurify gagal dimuat. Aplikasi dihentikan untuk mengelakkan rendering HTML tidak selamat.");
+}
+
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============================================================================
-// KESELAMATAN FRONTEND: Sanitization & Escaping
+// KESELAMATAN FRONTEND: Sanitization, Allowlist & Escaping
 // ============================================================================
 const SAFE_HTML_CONFIG = {
     ALLOWED_TAGS: [
@@ -20,19 +28,30 @@ const SAFE_HTML_CONFIG = {
     ALLOW_DATA_ATTR: false
 };
 
-if (typeof DOMPurify === "undefined") {
-    throw new Error("DOMPurify gagal dimuat. Aplikasi dihentikan untuk mengelakkan rendering HTML tidak selamat.");
-}
+const ALLOWED_CLASSES = new Set([
+    "admin-highlight",
+    "public-highlight",
+    "inline-bullet-list"
+]);
 
 DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
     if (data.attrName === "style") {
         const value = String(data.attrValue || "").trim();
         const isSafeColor = node.nodeName === "SPAN" &&
-            /^color\s*:\s*(#[0-9a-f]{3,8}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)|rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0|1|0?\.\d+)\s*\))$/i.test(value);
+            /^color\s*:\s*(#[0-9a-f]{3,8}|rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)|rgba\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*(?:0|1|0?\.\d+)\s*\))\s*;?$/i.test(value);
         if (!isSafeColor) {
             data.keepAttr = false;
         } else {
             data.attrValue = value;
+        }
+    } else if (data.attrName === "class") {
+        const safeClasses = String(data.attrValue || "")
+            .split(/\s+/)
+            .filter(cls => ALLOWED_CLASSES.has(cls));
+        if (safeClasses.length === 0) {
+            data.keepAttr = false;
+        } else {
+            data.attrValue = safeClasses.join(" ");
         }
     }
 });
@@ -59,6 +78,20 @@ function sanitizeHtml(html) {
     return DOMPurify.sanitize(decodeEscapedRichHtml(html), SAFE_HTML_CONFIG);
 }
 
+function sanitizeMultilineHtml(html) {
+    return sanitizeHtml(String(html ?? "").replace(/\r?\n/g, "<br>"));
+}
+
+function toPublicHighlightHtml(html) {
+    const container = document.createElement("div");
+    container.innerHTML = sanitizeHtml(html);
+    container.querySelectorAll("mark.admin-highlight").forEach(mark => {
+        mark.classList.remove("admin-highlight");
+        mark.classList.add("public-highlight");
+    });
+    return container.innerHTML;
+}
+
 function escapeHtml(value) {
     return String(value ?? "")
         .replace(/&/g, "&amp;")
@@ -79,10 +112,12 @@ function sanitizeEditorHtml(html) {
 // ============================================================================
 // KAWALAN KEBOLEHCAPAIAN SAIZ TEKS (A-, A, A+, A++)
 // ============================================================================
+const ALLOWED_SCALES = new Set(["0.92", "1", "1.12", "1.25"]);
 const scaleButtons = document.querySelectorAll(".scale-btn");
 scaleButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-        const scaleVal = btn.getAttribute("data-scale") || "1";
+        const rawScale = btn.getAttribute("data-scale") || "1";
+        const scaleVal = ALLOWED_SCALES.has(rawScale) ? rawScale : "1";
         document.documentElement.style.setProperty("--font-scale", scaleVal);
         scaleButtons.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
@@ -131,7 +166,7 @@ const hafalanArahAyat = document.getElementById("hafalanArahAyat");
 const hafalanArahGroup = document.getElementById("hafalanArahGroup");
 const btnRawakHafalan = document.getElementById("btnRawakHafalan");
 const btnResetHafalan = document.getElementById("btnResetHafalan");
-const hafalanCounterText = document.getElementById("hafalanCounterText");
+const hafalanCardSelect = document.getElementById("hafalanCardSelect");
 const hafalanMasteredCount = document.getElementById("hafalanMasteredCount");
 const hafalanProgressFill = document.getElementById("hafalanProgressFill");
 const flashcardArea = document.getElementById("flashcardArea");
@@ -202,15 +237,15 @@ navButtons.forEach(button => {
         navButtons.forEach(btn => btn.classList.remove("active"));
         viewSections.forEach(sec => sec.classList.remove("active"));
         button.classList.add("active");
-        
+
         const targetSection = button.getAttribute("data-target");
         const targetEl = document.getElementById(targetSection);
         if (targetEl) targetEl.classList.add("active");
-        
+
         if (btnFloatingSearch) {
             btnFloatingSearch.style.display = (targetSection === "sectionCarian" || targetSection === "sectionAyat") ? "flex" : "none";
         }
-        
+
         if (targetSection === "sectionAdmin") {
             closeForm();
             closeFormAyat();
@@ -440,13 +475,14 @@ function initHafalanDeck(shouldShuffle = false) {
             .filter(item => kategori === "semua" || item.disiplin_ilmu === kategori)
             .map(item => ({
                 id: "istilah-" + item.id,
+                selectLabel: item.title_ms || "Istilah",
                 frontSub: item.disiplin_ilmu ? item.disiplin_ilmu.toUpperCase() : "ISTILAH",
                 frontMainAr: item.title_ar || "",
                 frontMainMs: item.title_ms || "",
                 frontCustomHtml: "",
                 backTitle: "Definisi & Penerangan",
                 backContentHtml: item.definition
-                    ? sanitizeHtml(item.definition).replace(/\n/g, "<br>")
+                    ? sanitizeMultilineHtml(item.definition)
                     : "<i>Tiada definisi.</i>"
             }));
     } else if (sumber === "ayat") {
@@ -454,10 +490,13 @@ function initHafalanDeck(shouldShuffle = false) {
             const notaKataKunci = item.kata_kunci
                 ? `<div style="margin-top: 12px; font-size: 0.82rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
                 : "";
+            const teksRingkasAyat = stripHtml(item.terjemahan_ms).trim();
+            const labelAyat = teksRingkasAyat.length > 35 ? teksRingkasAyat.substring(0, 35) + "..." : teksRingkasAyat;
 
             if (arahAyat === "ms_ke_ar") {
                 return {
                     id: "ayat-" + item.id,
+                    selectLabel: labelAyat,
                     frontSub: "Bahasa Melayu",
                     frontMainAr: "",
                     frontMainMs: stripHtml(item.terjemahan_ms),
@@ -471,6 +510,7 @@ function initHafalanDeck(shouldShuffle = false) {
 
             return {
                 id: "ayat-" + item.id,
+                selectLabel: labelAyat,
                 frontSub: "Bahasa Arab",
                 frontMainAr: stripHtml(item.ayat_ar),
                 frontMainMs: "",
@@ -487,7 +527,7 @@ function initHafalanDeck(shouldShuffle = false) {
             return ekstrakNamaSurah(item.surah_ayat).toLowerCase() === surahPilihan.toLowerCase();
         });
 
-        rawList = filteredQuran.map((item, idx) => {
+        rawList = filteredQuran.map(item => {
             const info = parseSurahAyat(item.surah_ayat);
             const labelSurah = ` • ${info.labelPenuhBadge}`;
 
@@ -495,11 +535,11 @@ function initHafalanDeck(shouldShuffle = false) {
                 <div class="quran-makna-wrapper">
                     <div class="quran-makna-box quran-makna-mudah">
                         <div class="quran-makna-label">📖 Makna Mudah Difahami</div>
-                        <div class="quran-makna-text">${sanitizeHtml(item.makna_mudah || "").replace(/\n/g, "<br>")}</div>
+                        <div class="quran-makna-text">${sanitizeMultilineHtml(item.makna_mudah || "")}</div>
                     </div>
                     <div class="quran-makna-box quran-makna-literal">
                         <div class="quran-makna-label">🔍 Makna Secara Literal</div>
-                        <div class="quran-makna-text">${sanitizeHtml(item.makna_literal || "").replace(/\n/g, "<br>")}</div>
+                        <div class="quran-makna-text">${sanitizeMultilineHtml(item.makna_literal || "")}</div>
                     </div>
                 </div>
             `;
@@ -507,6 +547,7 @@ function initHafalanDeck(shouldShuffle = false) {
             if (arahAyat === "ms_ke_ar") {
                 return {
                     id: "quran-" + item.id,
+                    selectLabel: info.labelPenuhBadge,
                     frontSub: "Bahasa Melayu" + labelSurah,
                     frontMainAr: "",
                     frontMainMs: "",
@@ -518,6 +559,7 @@ function initHafalanDeck(shouldShuffle = false) {
 
             return {
                 id: "quran-" + item.id,
+                selectLabel: info.labelPenuhBadge,
                 frontSub: "Ayat Al-Quran" + labelSurah,
                 frontMainAr: item.ayat_ar || "",
                 frontMainMs: "",
@@ -539,9 +581,21 @@ function renderFlashcard() {
     const total = hafalanDeck.length;
     const masteredInDeck = hafalanDeck.filter(c => hafalanMasteredIds.has(c.id)).length;
 
-    if (hafalanCounterText) {
-        hafalanCounterText.textContent = total > 0 ? `Kad ${hafalanIndex + 1} daripada ${total}` : "Tiada Kad";
+    if (hafalanCardSelect) {
+        if (total === 0) {
+            hafalanCardSelect.innerHTML = `<option value="0">Tiada Kad</option>`;
+            hafalanCardSelect.disabled = true;
+        } else {
+            hafalanCardSelect.disabled = false;
+            hafalanCardSelect.innerHTML = hafalanDeck.map((c, idx) => {
+                const tanda = hafalanMasteredIds.has(c.id) ? " ✔" : "";
+                const label = c.selectLabel ? ` — ${c.selectLabel}` : "";
+                return `<option value="${idx}">Kad ${idx + 1} / ${total}${escapeHtml(label)}${tanda}</option>`;
+            }).join("");
+            hafalanCardSelect.value = String(hafalanIndex);
+        }
     }
+
     if (hafalanMasteredCount) {
         hafalanMasteredCount.textContent = `${masteredInDeck} / ${total}`;
     }
@@ -650,6 +704,16 @@ if (hafalanSumber) hafalanSumber.addEventListener("change", () => initHafalanDec
 if (hafalanKategori) hafalanKategori.addEventListener("change", () => initHafalanDeck(false));
 if (hafalanSurah) hafalanSurah.addEventListener("change", () => initHafalanDeck(false));
 if (hafalanArahAyat) hafalanArahAyat.addEventListener("change", () => initHafalanDeck(false));
+if (hafalanCardSelect) {
+    hafalanCardSelect.addEventListener("change", (e) => {
+        const idx = parseInt(e.target.value, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < hafalanDeck.length) {
+            hafalanIndex = idx;
+            hafalanFlipped = false;
+            renderFlashcard();
+        }
+    });
+}
 if (btnRawakHafalan) btnRawakHafalan.addEventListener("click", () => initHafalanDeck(true));
 if (btnResetHafalan) {
     btnResetHafalan.addEventListener("click", () => {
@@ -908,25 +972,17 @@ if (searchAyatInput) searchAyatInput.addEventListener("input", handleSearchAyatI
 function renderSearchAyatCard() {
     if (!resultsAyatList) return;
     resultsAyatList.innerHTML = "";
-    if (!selectedAyatItem) {
-        resultsAyatList.innerHTML = `
-            <div class="welcome-message">
-                <strong>Koleksi Ayat & Analisis Tatabahasa Interaktif</strong><br>
-                Taip kata kunci di atas atau pilih terus daripada menu pilihan ayat untuk melihat analisis perkataan Sorof, Nahu, dan 'Adad.
-            </div>
-        `;
-        return;
-    }
+    if (!selectedAyatItem) return;
 
     const card = document.createElement("div");
     card.className = "card";
     card.style.overflow = "hidden";
 
     const displayAyatAr = selectedAyatItem.ayat_ar
-        ? sanitizeHtml(selectedAyatItem.ayat_ar).replace(/admin-highlight/g, "public-highlight")
+        ? toPublicHighlightHtml(selectedAyatItem.ayat_ar)
         : "";
     const displayTerjemahan = selectedAyatItem.terjemahan_ms
-        ? sanitizeHtml(selectedAyatItem.terjemahan_ms).replace(/admin-highlight/g, "public-highlight")
+        ? toPublicHighlightHtml(selectedAyatItem.terjemahan_ms)
         : "";
 
     const tempDiv = document.createElement("div");
@@ -1027,7 +1083,7 @@ function renderSearchAyatCard() {
 
     badgeElements.forEach(badge => {
         badge.addEventListener("click", () => {
-            const targetKey = badge.getAttribute("data-target");
+            const targetKey = badge.getAttribute("data-target") || "";
             const targetType = badge.getAttribute("data-type");
             const isActive = badge.classList.contains("active");
 
@@ -1055,16 +1111,16 @@ function renderSearchAyatCard() {
                 });
 
                 if (defBox) {
-                    const termObj = dataIstilah.find(item => item.title_ms.trim().toLowerCase() === targetKey.trim().toLowerCase());
+                    const termObj = dataIstilah.find(item => (item.title_ms || "").trim().toLowerCase() === targetKey.trim().toLowerCase());
                     if (termObj) {
-                        defTitleMs.textContent = termObj.title_ms;
+                        defTitleMs.textContent = termObj.title_ms || "";
                         defTitleAr.textContent = termObj.title_ar || "";
                         if (targetType === "sorof") defBox.style.borderLeftColor = "#059669";
                         else if (targetType === "nahu") defBox.style.borderLeftColor = "#0284c7";
                         else if (targetType === "nombor") defBox.style.borderLeftColor = "#9333ea";
                         else defBox.style.borderLeftColor = "var(--accent-color)";
                         defContent.innerHTML = termObj.definition
-                            ? sanitizeHtml(termObj.definition).replace(/\n/g, "<br>")
+                            ? sanitizeMultilineHtml(termObj.definition)
                             : "<i>Tiada penerangan khusus disediakan di dalam Kamus Istilah.</i>";
                     } else {
                         defTitleMs.textContent = targetKey;
@@ -1089,7 +1145,7 @@ document.addEventListener("click", (e) => {
 });
 
 // ============================================================================
-// PANEL ADMIN: VISUAL EDITOR AYAT
+// PANEL ADMIN: VISUAL EDITOR AYAT (PLAIN-TEXT PASTE & CALLBACK REPLACE)
 // ============================================================================
 function addHighlight() {
     const modal = document.getElementById("customPromptModal");
@@ -1149,14 +1205,14 @@ if (btnCustomPromptOk) {
         let regexMelayu = null;
 
         if (!regexArab.test(editorArab.innerHTML)) {
-            alert(`Ralat: Perkataan Arab "${escapeHtml(perkataanArab)}" tidak dijumpai di dalam teks editor Arab. Sila periksa ejaan.`);
+            alert(`Ralat: Perkataan Arab "${perkataanArab}" tidak dijumpai di dalam teks editor Arab. Sila periksa ejaan.`);
             return;
         }
 
         if (perkataanMelayu !== "") {
             regexMelayu = new RegExp(`(${escapeRegExp(perkataanMelayu)})(?![^<]*>)`);
             if (!regexMelayu.test(editorMelayu.innerHTML)) {
-                alert(`Ralat: Terjemahan "${escapeHtml(perkataanMelayu)}" tidak dijumpai di dalam teks editor Melayu.`);
+                alert(`Ralat: Terjemahan "${perkataanMelayu}" tidak dijumpai di dalam teks editor Melayu.`);
                 return;
             }
         }
@@ -1178,10 +1234,13 @@ if (btnCustomPromptOk) {
         }
 
         const combinedTooltip = escapeAttr(tooltipTitles.join(" | "));
-        const markElementHtml = `<mark class="admin-highlight"${dataAttributes} title="${combinedTooltip}">$1</mark>`;
+        const buildMark = (_, matchedText) =>
+            `<mark class="admin-highlight"${dataAttributes} title="${combinedTooltip}">${matchedText}</mark>`;
 
-        editorArab.innerHTML = editorArab.innerHTML.replace(regexArab, markElementHtml);
-        if (regexMelayu) editorMelayu.innerHTML = editorMelayu.innerHTML.replace(regexMelayu, markElementHtml);
+        editorArab.innerHTML = sanitizeEditorHtml(editorArab.innerHTML.replace(regexArab, buildMark));
+        if (regexMelayu) {
+            editorMelayu.innerHTML = sanitizeEditorHtml(editorMelayu.innerHTML.replace(regexMelayu, buildMark));
+        }
 
         updateKeywordsList();
         document.getElementById("customPromptModal").style.display = "none";
@@ -1243,6 +1302,27 @@ function updateKeywordsList() {
 
 if (ayatArEditor) ayatArEditor.addEventListener("input", updateKeywordsList);
 if (terjemahanMsEditor) terjemahanMsEditor.addEventListener("input", updateKeywordsList);
+
+// Sekat tampalan HTML mentah ke dalam editor contenteditable (teks biasa sahaja)
+[ayatArEditor, terjemahanMsEditor].forEach(editor => {
+    if (!editor) return;
+    editor.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const plainText = (e.clipboardData || window.clipboardData).getData("text/plain");
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(plainText);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        updateKeywordsList();
+    });
+});
 
 // ============================================================================
 // PANEL ADMIN: CRUD KOLEKSI AYAT & DELEGASI KLIK TUNGGAL
@@ -1462,7 +1542,7 @@ function renderAlphabeticalDirectory() {
                 const foundItem = dataIstilah.find(i => String(i.id) === String(itemEl.getAttribute("data-id")));
                 if (foundItem) {
                     selectedSearchItem = foundItem;
-                    searchInput.value = foundItem.title_ms;
+                    searchInput.value = foundItem.title_ms || "";
                     renderSearchCard();
                     resultsList.scrollIntoView({ behavior: "smooth" });
                 }
@@ -1483,9 +1563,12 @@ function handleSearchInput(e) {
 
     const matches = dataIstilah.filter(item => {
         const lower = currentSearch.toLowerCase();
-        return item.title_ms.toLowerCase().includes(lower) ||
-               item.title_ar.includes(lower) ||
-               (item.keywords && item.keywords.some(kw => kw.includes(lower)));
+        const titleMs = (item.title_ms || "").toLowerCase();
+        const titleAr = item.title_ar || "";
+        const keywords = Array.isArray(item.keywords) ? item.keywords : [];
+        return titleMs.includes(lower) ||
+               titleAr.includes(lower) ||
+               keywords.some(kw => String(kw || "").toLowerCase().includes(lower));
     });
 
     suggestionsList.innerHTML = "";
@@ -1507,7 +1590,7 @@ function handleSearchInput(e) {
             `;
             div.addEventListener("click", () => {
                 selectedSearchItem = item;
-                searchInput.value = item.title_ms;
+                searchInput.value = item.title_ms || "";
                 suggestionsList.style.display = "none";
                 renderSearchCard();
                 resultsList.scrollIntoView({ behavior: "smooth" });
@@ -1525,25 +1608,17 @@ if (searchInput) searchInput.addEventListener("input", handleSearchInput);
 function renderSearchCard() {
     if (!resultsList) return;
     resultsList.innerHTML = "";
-    if (!selectedSearchItem) {
-        resultsList.innerHTML = `
-            <div class="welcome-message" style="margin-bottom: 24px;">
-                <strong>Selamat Datang ke Kamus Istilah!</strong><br>
-                Sila taip nama istilah di kotak carian atas atau klik mana-mana huruf pada indeks abjad di bawah.
-            </div>
-        `;
-        return;
-    }
+    if (!selectedSearchItem) return;
 
     const card = document.createElement("div");
     card.className = "card";
     card.style.marginBottom = "32px";
 
     let formattedCharacteristics = "";
-    if (selectedSearchItem.characteristics && selectedSearchItem.characteristics.length > 0) {
+    if (Array.isArray(selectedSearchItem.characteristics) && selectedSearchItem.characteristics.length > 0) {
         selectedSearchItem.characteristics.forEach(c => {
             try {
-                if (c.startsWith("{") && c.endsWith("}")) {
+                if (typeof c === "string" && c.startsWith("{") && c.endsWith("}")) {
                     const parsed = JSON.parse(c);
                     if (parsed.mainTitle) {
                         formattedCharacteristics += `
@@ -1562,7 +1637,7 @@ function renderSearchCard() {
                     if (parsed.content) {
                         formattedCharacteristics += `
                             <div class="definition" style="margin-bottom: 16px; line-height: 1.65;">
-                                ${sanitizeHtml(parsed.content).replace(/\n/g, "<br>")}
+                                ${sanitizeMultilineHtml(parsed.content)}
                             </div>
                         `;
                     }
@@ -1607,10 +1682,10 @@ function renderSearchCard() {
                         `;
                     }
                 } else {
-                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.65;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
+                    formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.65;">${sanitizeMultilineHtml(c)}</div>`;
                 }
             } catch (e) {
-                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.65;">${sanitizeHtml(c).replace(/\n/g, "<br>")}</div>`;
+                formattedCharacteristics += `<div style="margin-bottom: 8px; line-height: 1.65;">${sanitizeMultilineHtml(c)}</div>`;
             }
         });
     }
@@ -1657,7 +1732,7 @@ function renderSearchCard() {
     }
 
     const formattedDefinition = selectedSearchItem.definition
-        ? sanitizeHtml(selectedSearchItem.definition).replace(/\n/g, "<br>")
+        ? sanitizeMultilineHtml(selectedSearchItem.definition)
         : "";
     let paparanKategori = "";
     if (selectedSearchItem.disiplin_ilmu === "sorof") paparanKategori = "Ilmu Sorof";
@@ -1687,10 +1762,14 @@ function renderAdminList(filterText = "") {
     const lowerFilter = filterText.toLowerCase();
 
     const filteredData = dataIstilah.filter(item => {
-        return item.title_ms.toLowerCase().includes(lowerFilter) ||
-               item.title_ar.includes(lowerFilter) ||
-               (item.disiplin_ilmu && item.disiplin_ilmu.toLowerCase().includes(lowerFilter)) ||
-               (item.keywords && item.keywords.some(kw => kw.includes(lowerFilter)));
+        const titleMs = (item.title_ms || "").toLowerCase();
+        const titleAr = item.title_ar || "";
+        const disiplin = (item.disiplin_ilmu || "").toLowerCase();
+        const keywords = Array.isArray(item.keywords) ? item.keywords : [];
+        return titleMs.includes(lowerFilter) ||
+               titleAr.includes(lowerFilter) ||
+               disiplin.includes(lowerFilter) ||
+               keywords.some(kw => String(kw || "").toLowerCase().includes(lowerFilter));
     });
 
     if (filteredData.length === 0) {
@@ -1801,19 +1880,19 @@ function editItem(id) {
     closeFormQuran();
     formTitle.textContent = "Ubah Maklumat Istilah";
     inputId.value = item.id;
-    inputTitleMs.value = item.title_ms;
-    inputTitleAr.value = item.title_ar;
+    inputTitleMs.value = item.title_ms || "";
+    inputTitleAr.value = item.title_ar || "";
     if (inputDisiplin) inputDisiplin.value = item.disiplin_ilmu || "";
-    inputKeywords.value = item.keywords ? item.keywords.join(", ") : "";
-    inputDefinition.value = item.definition;
+    inputKeywords.value = Array.isArray(item.keywords) ? item.keywords.join(", ") : "";
+    inputDefinition.value = item.definition || "";
     ciriSectionsContainer.innerHTML = "";
 
-    if (item.characteristics && item.characteristics.length > 0) {
+    if (Array.isArray(item.characteristics) && item.characteristics.length > 0) {
         let hasLegacy = false;
         const legacyText = [];
         item.characteristics.forEach(c => {
             try {
-                if (c.startsWith("{") && c.endsWith("}")) {
+                if (typeof c === "string" && c.startsWith("{") && c.endsWith("}")) {
                     const parsed = JSON.parse(c);
                     createCiriSectionInput(parsed.mainTitle || "", parsed.subTitle || "", parsed.content || "", parsed.table_data || null);
                 } else {
@@ -1955,7 +2034,7 @@ function createCiriSectionInput(mainTitleVal = "", subTitleVal = "", contentVal 
         rowsArea.appendChild(rowDiv);
     }
 
-    if (tableDataVal && tableDataVal.rows) {
+    if (tableDataVal && Array.isArray(tableDataVal.rows)) {
         tableDataVal.rows.forEach(r => addCiriTableRow(r[0], r[1], r[2], r[3]));
     }
     btnAddRowCiri.addEventListener("click", () => addCiriTableRow());
@@ -2222,6 +2301,53 @@ supabaseClient.auth.onAuthStateChange((_event, session) => {
     updateAdminUI(session);
 });
 
+// ============================================================================
+// POP-UP PENAFIAN AUTOMATIK (KIRI ATAS DENGAN TIMER)
+// ============================================================================
+(function initDisclaimerPopup() {
+    const popup = document.getElementById("disclaimerPopup");
+    const timerText = document.getElementById("disclaimerTimerText");
+    const timerBar = document.getElementById("disclaimerTimerBar");
+    const btnClose = document.getElementById("btnCloseDisclaimer");
+
+    if (!popup) return;
+
+    const totalSeconds = 8;
+    let remaining = totalSeconds;
+    let countdownInterval = null;
+
+    function closePopup() {
+        clearInterval(countdownInterval);
+        popup.classList.remove("show");
+    }
+
+    function updateTimerUI() {
+        if (timerText) timerText.textContent = `${remaining}s`;
+        if (timerBar) timerBar.style.width = `${(remaining / totalSeconds) * 100}%`;
+    }
+
+    setTimeout(() => {
+        popup.classList.add("show");
+        updateTimerUI();
+
+        countdownInterval = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                closePopup();
+            } else {
+                updateTimerUI();
+            }
+        }, 1000);
+    }, 300);
+
+    if (btnClose) {
+        btnClose.addEventListener("click", closePopup);
+    }
+})();
+
+// ============================================================================
+// PERMULAAN APLIKASI
+// ============================================================================
 checkUserSession();
 loadDataFromSupabase();
 renderSearchCard();
