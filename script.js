@@ -553,9 +553,6 @@ function initHafalanDeck(shouldShuffle = false) {
             }));
     } else if (sumber === "ayat") {
         rawList = dataAyat.map(item => {
-            const notaKataKunci = item.kata_kunci
-                ? `<div style="margin-top: 12px; font-size: 0.82rem; color: var(--accent-color);">🏷️ Kata Kunci: ${escapeHtml(item.kata_kunci)}</div>`
-                : "";
             const teksRingkasAyat = stripHtml(item.terjemahan_ms).trim();
             const labelAyat = teksRingkasAyat.length > 35 ? teksRingkasAyat.substring(0, 35) + "..." : teksRingkasAyat;
 
@@ -569,8 +566,7 @@ function initHafalanDeck(shouldShuffle = false) {
                     frontCustomHtml: "",
                     backTitle: "Bahasa Arab",
                     backContentHtml:
-                        `<div style="font-family: var(--font-arabic); font-size: calc(2.2rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.8;">${escapeHtml(stripHtml(item.ayat_ar))}</div>` +
-                        notaKataKunci
+                        `<div style="font-family: var(--font-arabic); font-size: calc(2.2rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.8;">${escapeHtml(stripHtml(item.ayat_ar))}</div>`
                 };
             }
 
@@ -583,8 +579,7 @@ function initHafalanDeck(shouldShuffle = false) {
                 frontCustomHtml: "",
                 backTitle: "Bahasa Melayu",
                 backContentHtml:
-                    `<div style="font-size: calc(1.18rem * var(--font-scale)); font-weight: 700; color: var(--primary-color);">${escapeHtml(stripHtml(item.terjemahan_ms))}</div>` +
-                    notaKataKunci
+                    `<div style="font-size: calc(1.18rem * var(--font-scale)); font-weight: 700; color: var(--primary-color);">${escapeHtml(stripHtml(item.terjemahan_ms))}</div>`
             };
         });
     } else if (sumber === "quran") {
