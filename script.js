@@ -569,7 +569,7 @@ function initHafalanDeck(shouldShuffle = false) {
                     frontCustomHtml: "",
                     backTitle: "Bahasa Arab",
                     backContentHtml:
-                        `<div style="font-family: var(--font-arabic); font-size: calc(2.2rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.8;">${sanitizeHtml(item.ayat_ar)}</div>` +
+                        `<div style="font-family: var(--font-arabic); font-size: calc(2.2rem * var(--font-scale)); color: var(--accent-color); direction: rtl; line-height: 1.8;">${escapeHtml(stripHtml(item.ayat_ar))}</div>` +
                         notaKataKunci
                 };
             }
@@ -583,7 +583,7 @@ function initHafalanDeck(shouldShuffle = false) {
                 frontCustomHtml: "",
                 backTitle: "Bahasa Melayu",
                 backContentHtml:
-                    `<div style="font-size: calc(1.18rem * var(--font-scale)); font-weight: 700; color: var(--primary-color);">${sanitizeHtml(item.terjemahan_ms)}</div>` +
+                    `<div style="font-size: calc(1.18rem * var(--font-scale)); font-weight: 700; color: var(--primary-color);">${escapeHtml(stripHtml(item.terjemahan_ms))}</div>` +
                     notaKataKunci
             };
         });
