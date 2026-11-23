@@ -370,6 +370,15 @@ function susunIkutSurahDanAyat(list) {
     });
 }
 
+function susunAyatIkutAksara(list) {
+    return [...list].sort((a, b) => {
+        const lenA = stripHtml(a.ayat_ar).trim().length;
+        const lenB = stripHtml(b.ayat_ar).trim().length;
+        if (lenA !== lenB) return lenA - lenB;
+        return stripHtml(a.terjemahan_ms).trim().length - stripHtml(b.terjemahan_ms).trim().length;
+    });
+}
+
 function kemaskiniSenaraiSurahDropdown() {
     if (!hafalanSurah) return;
     const pilihanSemasa = hafalanSurah.value;
@@ -443,7 +452,7 @@ async function loadDataFromSupabase() {
         }
 
         dataIstilah = resIstilah.data || [];
-        dataAyat = resAyat.data || [];
+        dataAyat = susunAyatIkutAksara(resAyat.data || []);
         dataQuran = susunIkutSurahDanAyat(resQuran.data || []);
 
         renderAdminList();
